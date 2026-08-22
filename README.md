@@ -4,7 +4,7 @@
 
 Smart India Hackathon 2026 · Problem Statement SIH26157 · NCIIPC
 
-> From SOC operational data to evidence-driven supervisory insight.
+> Evidence-driven supervisory insight at portfolio scale.
 
 ---
 
@@ -41,6 +41,9 @@ Execution gaps occur when documentation, policies, metrics, or management report
 - Repetitive, template-driven investigations that lack depth
 - Controls deployed but not effectively monitored
 - Operational behaviour optimised for metrics rather than risk reduction
+- Alert severity "critical" but closure rationale "benign"
+- Investigation "completed" in implausibly short time
+- Escalation decision recorded without investigation evidence
 
 From a supervisory perspective, execution gaps are dangerous because they create an **illusion of maturity**. An entity may appear compliant while its SOC is not performing meaningful work.
 
@@ -54,8 +57,20 @@ Negative space occurs where expected evidence is absent. Supervisory signals inc
 - Unexpectedly low activity levels relative to asset inventory or peer entities
 - Monitoring blind spots
 - No evidence of activities that would normally be expected in comparable environments
+- Entire asset categories with no telemetry despite claimed monitoring
+- Expected alert sources completely absent (e.g., no endpoint-based detections)
 
-Negative space is particularly hard to detect through conventional reporting because **absence is invisible** until someone knows what to look for. SAT-SA is designed to surface these absences systematically.
+Negative space is particularly hard to detect through conventional reporting because **absence is invisible** until someone knows what to look for. SAT-SA is designed to surface these absences systematically by building **CSE-specific expected-evidence models** and comparing them against observed data.
+
+### Why Conventional Tools Miss This
+
+| Tool | What It Sees | What It Misses |
+|------|-------------|----------------|
+| KPI Dashboard | Response time, closure rate, escalation count | Investigation depth, escalation legitimacy, trend degradation |
+| SIEM | Alerts in real time | Whether the SOC actually understands them or just closes them |
+| Audit/Compliance | Policy conformance | Actual execution vs. documented processes |
+| Manual Review (current) | Deep insight from samples | Cannot scale to portfolio-wide supervision |
+| **SAT-SA (if done well)** | **Behavioral patterns, evidence chains, absence, divergence** | **Should catch all of the above at scale** |
 
 ---
 
@@ -63,21 +78,44 @@ Negative space is particularly hard to detect through conventional reporting bec
 
 SAT-SA is a supervisory intelligence and analytics platform. It ingests periodic, structured submissions from CSEs, normalises the data, applies supervisory analytics, and presents evidence-backed findings to human examiners.
 
-The end-to-end flow is:
+### The Core Innovation
+
+Most supervisory tools ask: "What happened?" (descriptive).
+
+SAT-SA asks:
+- "What *should* have happened?" (prescriptive)
+- "Where is the gap?" (diagnostic)
+- "Is the gap systemic or incidental?" (analytical)
+- "What should the examiner investigate first?" (prioritization)
+
+This requires **three integrated components**:
+
+1. **CSE-Specific Expected Model** — For each CSE, predict "normal" evidence based on claims + history
+2. **Observed-vs-Expected Comparison** — Compare actual evidence to expected, distinguishing absence from data-reporting gaps
+3. **Behavioral Fingerprinting & Change Detection** — Model each CSE's operational "normal" and detect when behavior changes
+
+### The End-to-End Flow
 
 ```
 CSE Data (alerts, cases, investigations, escalations, asset inventory)
     ↓
 Data Ingestion & Validation
     ↓
-Normalisation & Feature Extraction
+Normalisation & Behavioral Profile Extraction
     ↓
-Supervisory Analytics Layer
-├── Execution Gap Engine
-├── Negative Space Engine
-├── Anomaly & Outlier Detection
-├── Peer Benchmarking
-└── Supervisory Risk Scoring
+Supervisory Analytics Layer (7 Layers)
+├── Layer 3a: Workflow Integrity Engine
+├── Layer 3b: Expected Evidence Model
+├── Layer 3c: Temporal Drift Detection
+├── Layer 3d: Peer Benchmarking Engine
+    ↓
+Layer 4: Signal Fusion & Supervisory Case Generation
+    ↓
+Layer 5: Unsupervised Pattern Discovery
+    ↓
+Layer 6: Prioritization & Evidence Tracing
+    ↓
+Layer 7: Explainability & Rationale Generation
     ↓
 Finding & Evidence Engine
     ↓
@@ -137,84 +175,149 @@ The architecture is modular, offline-capable, and built around the supervisory a
 flowchart TD
     A[CSE Submissions<br/>CSV / JSON / DB Export] --> B[Ingestion & Validation]
     B --> C[Normalisation Layer]
-    C --> D[Feature Extraction]
+    C --> D[Behavioral Profile Extraction]
     D --> E[Supervisory Analytics Engine]
-    E --> F1[Execution Gap Engine]
-    E --> F2[Negative Space Engine]
-    E --> F3[Anomaly Detection]
-    E --> F4[Peer Benchmarking]
-    E --> F5[Supervisory Risk Scoring]
-    F1 --> G[Finding & Evidence Engine]
+    E --> F1[Workflow Integrity Engine]
+    E --> F2[Expected Evidence Model]
+    E --> F3[Temporal Drift Detection]
+    E --> F4[Peer Benchmarking Engine]
+    F1 --> G[Signal Fusion & Case Generation]
     F2 --> G
     F3 --> G
     F4 --> G
-    F5 --> G
-    G --> H[Prioritisation & Ranking]
-    H --> I[Dashboard & Reports]
-    I --> J[Human Supervisor]
+    G --> H[Unsupervised Pattern Discovery]
+    H --> I[Prioritisation & Evidence Tracing]
+    I --> J[Explainability & Rationale Generation]
+    J --> K[Dashboard & Reports]
+    K --> L[Human Supervisor]
 ```
 
-**Design principles:**
+### Design Principles
 
 - **Offline-first:** All processing occurs locally; no external network calls.
 - **Deterministic core:** Analytics are primarily rule-based and statistical, ensuring reproducibility and auditability.
 - **Explainability by construction:** Every finding carries the records, rules, and thresholds that produced it.
+- **Evidence-integrity first:** Analytics focus on workflow integrity, expected-evidence gaps, and behavioral drift — not generic anomaly scoring.
 - **Extensible:** New supervisory signals can be added as analytics modules without altering the core pipeline.
 
 ---
 
 ## 7. Supervisory Analytics Engine
 
-The analytics engine is the technical core of SAT-SA. It is organised into four detection domains.
+The analytics engine is the technical core of SAT-SA. It is organised into **8 detection modules** across **7 layers**.
 
-### 7.1 Execution Gap Engine
+### 7.1 Evidence Chain Integrity Engine
 
-Execution gaps are detected by comparing operational behaviour against expected baselines and documented expectations.
+Models each alert/case as a workflow with expected state transitions and artifacts. Detects broken workflows that dashboards miss.
 
-| Signal | Input | Feature | Detection Method | Supervisory Interpretation |
-|--------|-------|---------|------------------|---------------------------|
-| Closure velocity anomaly | Alert open/close timestamps, severity | Closure time distribution per severity tier | Statistical thresholding against entity baseline and peer percentile | Unusually fast closure may indicate insufficient investigation |
-| Escalation inconsistency | Escalation records, severity, asset criticality | Escalation rate by severity and asset class | Rule-based: expected escalation events absent for high-severity or critical assets | Missing escalation on critical alerts is a supervisory signal |
-| Repetitive investigation behaviour | Investigation notes, case IDs per alert | Lexical similarity, template patterns, repeat counts | Statistical repetition scoring | Highly repetitive notes may indicate superficial review |
-| Repeated alerts without remediation | Alert fingerprints, asset IDs, closure reasons | Recurrence interval per asset-alert pair | Temporal clustering of identical alerts post-closure | Recurrence without root-cause evidence suggests ineffective closure |
-| Investigation depth indicators | Investigation workflow steps, notes length, attachment counts | Step completion, note entropy, evidence attachment rate | Threshold and distribution analysis | Low depth scores may indicate perfunctory investigations |
-| KPI / risk divergence | Reported metrics vs operational outcomes | Discrepancy between stated performance and closure/escalation patterns | Comparative analysis | Divergence suggests metrics may not reflect real effectiveness |
+| Signal | Detection Method | Supervisory Interpretation |
+|--------|-----------------|---------------------------|
+| Missing transitions | Workflow state machine validation | Critical alert → no investigation → direct closure (broken chain) |
+| Contradictory evidence | Severity vs. closure rationale comparison | Alert severity "critical" but closure "benign" without investigation |
+| Temporal implausibility | Duration vs. severity distribution | Investigation "completed" in 2 minutes for a critical alert |
+| Incomplete chain | Required artifact presence check | Investigation documented but no escalation decision recorded |
+| Evidence absence | Dependency check | Escalation decision without investigation evidence |
+| Premature closure | Post-incident review period check | Closure before expected post-incident review period |
 
-### 7.2 Negative Space Engine
+### 7.2 Expected-Evidence Model
 
-Negative space is detected by identifying expected evidence that is missing.
+Builds a CSE-specific model of what evidence *should* be observed based on claims, asset inventory, and historical patterns.
 
-| Signal | Input | Feature | Detection Method | Supervisory Interpretation |
-|--------|-------|---------|------------------|---------------------------|
-| Missing expected alert categories | Alert taxonomy, asset inventory | Coverage of expected alert types per asset class | Inventory-to-alert mapping | Gaps may indicate missing detection capability |
-| Low activity relative to baseline | Alert volumes, case counts, time period | Entity-specific and peer-relative activity baselines | Z-score and percentile comparison | Abnormally low volume may indicate missing telemetry or suppressed alerts |
-| Missing investigations | Alerts closed without linked investigation records | Investigation closure ratio | Completeness check | Alerts without investigations suggest gaps in the investigation process |
-| Missing escalation records | High-severity alerts, critical asset alerts | Escalation record linkage rate | Completeness check | Missing escalation records on critical alerts is a direct supervisory signal |
-| Critical assets with insufficient monitoring evidence | Asset inventory, alert and telemetry metadata | Monitoring coverage ratio per critical asset | Coverage gap analysis | Critical assets with little or no alert evidence may have monitoring blind spots |
-| Peer-relative coverage gaps | Multi-entity alert taxonomy and asset data | Category coverage percentile ranking | Peer benchmarking | Categories present across peers but absent for one entity indicate potential blind spots |
+| Signal | Detection Method | Supervisory Interpretation |
+|--------|-----------------|---------------------------|
+| Alert volume gap | Expected vs. observed volume (Bayesian comparison) | If 0 alerts despite claimed monitoring, monitoring is likely dead |
+| Missing alert categories | Inventory-to-alert mapping | If EDR deployed but no process-injection alerts, detection gap |
+| Alert source distribution | Asset-to-source correlation | All alerts from network segment A; nothing from B, C, D |
+| Investigation ratio gap | Expected vs. observed investigation rate | High-severity alerts with no investigation record |
+| Evidence artifact absence | Claimed capability vs. documented artifacts | Escalation without threat-intel lookup or config review |
 
-### 7.3 Anomaly Detection
+### 7.3 Investigation Quality Heuristics
 
-Anomaly detection identifies outliers and suspicious operational patterns.
+Detects shallow vs. quality investigation through measurable signals.
 
-- **Univariate outliers:** Metrics such as closure time, case volume, and escalation rate are analysed per entity using robust statistical methods (e.g., IQR, modified Z-score).
-- **Multivariate patterns:** Combinations of metrics (e.g., high volume + low investigation depth + fast closure) are evaluated to detect compound anomalies that individual metrics would not reveal.
-- **Temporal anomalies:** Sudden shifts in activity levels or operational patterns between submission periods are flagged for trend review.
+**Markers of Shallow Investigation:**
+- Investigation notes are generic/templated ("Checked logs, found nothing")
+- Time invested is implausibly short for alert complexity
+- No attempt to determine root cause (just closed alert)
+- No supporting evidence documented
+- Same template used for different alert types
+- No timestamp gaps between investigation open and close (single session, no real work)
 
-Anomalies are presented as **indicators**, not conclusions. They direct examiner attention rather than asserting non-compliance.
+**Detection Approach:**
+- **Text analysis:** NLP to classify investigation notes as templated vs. contextual
+- **Temporal analysis:** Investigation duration vs. alert complexity (mismatch = red flag)
+- **Evidence audit:** Presence/absence of specific evidence types
+- **Consistency check:** Identical investigations closed identically (copy-paste?)
 
-### 7.4 Peer Benchmarking
+### 7.4 Temporal Drift & Behavioral Change Detection
 
-Peer benchmarking contextualises entity metrics against comparable CSEs.
+Uses time-series analysis and change-point detection to identify when and how SOC operational behavior changes.
 
-- **Peer grouping:** Entities are grouped by type, size, and criticality where such attributes are available. Where grouping data is limited, full-portfolio percentile comparison is used with explicit disclosure.
-- **Normalised metrics:** Raw counts and durations are normalised to enable fair comparison.
-- **Deviation scoring:** Entities are scored by the magnitude and direction of their deviation from peer baselines.
-- **Disclosure:** Benchmarking results include the peer group definition and the metrics used, so examiners can assess relevance.
+**Measurable Behavioral Dimensions:**
+1. Investigation Depth: Average investigator effort per alert
+2. Closure Velocity: Time from alert to closure (median, variance, by severity)
+3. Escalation Propensity: % of alerts escalated
+4. Alert Volume Trend: Alerts per day over time (sudden drops are suspicious)
+5. Investigation Quality Trend: Evidence entries per investigation (declining trend is suspicious)
+6. Repetition Pattern: Identical investigations recur with same resolution
+7. Workload Distribution: Concentration of work among staff
+8. Responsiveness: Mean time to first action on alert
 
-Peer comparison is used to identify significant deviations, not to rank entities as "better" or "worse" in absolute terms.
+**Novel Analysis:**
+- **Change-point detection:** Statistical methods (CUSUM, Bayesian change-point) to identify when SOC behavior shifts
+- **Drift detection:** Gradual degradation vs. abrupt change (different underlying causes)
+- **Anomalous consistency:** Behavior that is suspiciously *stable* (e.g., every critical alert closed in exactly 4 hours)
+- **Seasonality removal:** Distinguish legitimate variance from concerning drift
 
-### 7.5 Supervisory Attention Score
+### 7.5 KPI-vs-Operational-Reality Divergence
+
+Compares reported metrics (SLA compliance, closure rates, escalation counts) against operational quality indicators.
+
+**Divergence Patterns:**
+
+| Reported Metric | Operational Signal | Interpretation |
+|----------------|-------------------|----------------|
+| Alert Response SLA: 99% ✓ | Investigation depth ↓ | SLA gaming |
+| Closure Rate: 95% ✓ | Evidence quality ↓ | Superficial closures |
+| Mean Closure Time: 6h ✓ | Investigation completeness ↓ | Speed over thoroughness |
+| Escalation Count: +20% ✓ | Post-escalation follow-up ↓ | Escalation without action |
+
+**Detection Approach:** Build a correlation matrix between reported KPIs and operational quality indicators. If SLA compliance improves but investigation depth declines → potential gaming.
+
+### 7.6 Peer Benchmarking with Smart Grouping
+
+Contextualises entity metrics against comparable CSEs with normalization to avoid misleading comparisons.
+
+**NOT:** "CSE-042 closes alerts 10x faster than CSE-017" (entities are different; meaningless)
+
+**INSTEAD:** "CSE-042's closure velocity is 3σ below peer group after controlling for alert mix, asset count, and staffing."
+
+**Normalization Factors:**
+- Alert severity distribution (high-risk group may naturally close faster)
+- Asset inventory complexity (large, complex environments need deeper investigation)
+- Sector norms (financial services vs. utilities vs. telecom have different baselines)
+- Claimed detection capabilities (more mature SOCs may handle more alerts)
+- Historical stability (stable entities vs. new/changing SOCs)
+
+**Finding Types:**
+- **Consistent outlier:** Always in top/bottom 5% → structural difference
+- **Recent outlier:** Recently diverged from peers → possible incident or staffing change
+- **Unexplained similarity:** Multiple CSEs exhibit nearly identical suspicious behavior → possible shared weakness
+- **Healthy outlier:** Deviates from peers but for defensible reasons
+
+### 7.7 Cyclical & Temporal Anomalies
+
+Detects patterns in SOC operations that deviate from expected temporal behavior.
+
+**Anomalies to Detect:**
+1. Unexpected quiet periods: No alerts during peak threat hours
+2. After-hours absence: Critical system activity not investigated outside business hours
+3. Weekend gaps: Missing escalations on weekends (on-call failure?)
+4. Periodic bulk closures: Mass closures every Friday (clearing backlog vs. legitimate patterns)
+5. Shift-based quality variance: Investigations by night shift much shallower than day shift
+6. Staffing-correlated gaps: Alerts increase when staff on leave; investigations decrease
+
+### 7.8 Supervisory Attention Score
 
 The Supervisory Attention Score aggregates detected signals into an entity-level indicator that helps prioritise manual review.
 
@@ -225,16 +328,24 @@ The Supervisory Attention Score aggregates detected signals into an entity-level
 - Anomaly severity and persistence across periods
 - Peer-deviation magnitude
 - Evidence completeness and confidence
+- Signal diversity (multiple signal types increase confidence)
 
 **How it is calculated:**
 
-The score is a weighted aggregation of normalised signal strengths. Exact weights and thresholds are configurable and documented in the analytics module configuration. The score is **not** a security posture rating, compliance score, or cyber risk index. It is a prioritisation tool: it answers "where should a supervisor look first?"
+The score is a weighted aggregation of normalised signal strengths. Weights prioritize:
+- Signal confidence (0.4)
+- Signal severity (0.3)
+- Signal count and diversity (0.3)
+
+Exact weights and thresholds are configurable and documented in the analytics module configuration. The score is **not** a security posture rating, compliance score, or cyber risk index. It is a prioritisation tool: it answers "where should a supervisor look first?"
 
 ---
 
 ## 8. Explainability and Evidence
 
 Explainability is a first-class requirement of SAT-SA, not an afterthought.
+
+### What Makes a Finding Explainable
 
 For every finding, the system records and presents:
 
@@ -245,6 +356,15 @@ For every finding, the system records and presents:
 5. **How unusual it is** — entity-specific and peer-relative context (percentile, deviation magnitude, baseline comparison)
 6. **What the supervisor should review** — recommended records, time ranges, and analytical views
 7. **Strength of the signal** — confidence or severity indicator based on evidence quality and consistency
+8. **Caveats and alternative explanations** — What could cause false positives? What else might explain this?
+
+### Why Rationale ≠ Causation
+
+SAT-SA explicitly distinguishes:
+- **Rationale:** Why the system flagged this (the detection logic)
+- **Causation:** Why the condition exists (requires examiner judgment)
+
+The system provides the rationale. The examiner determines causation and appropriate follow-up.
 
 This structure ensures that:
 - Examiners can validate findings independently.
@@ -260,33 +380,48 @@ The following is a realistic, end-to-end finding produced by SAT-SA.
 
 ---
 
-**Entity:** CSE-017  
-**Finding Type:** Potential investigation effectiveness gap  
-**Signal Category:** Execution Gap  
+**Entity:** CSE-042  
+**Finding Type:** Investigation effectiveness degradation  
+**Signal Category:** Execution Gap + Behavioral Drift + Peer Outlier  
 
 **Summary:**  
-CSE-017 closed 23 critical alerts during the submission period. Median closure time for critical alerts was 18 minutes, compared to a portfolio median of 4.2 hours. Investigation notes for 19 of the 23 alerts exhibited high lexical similarity, consistent with template-driven responses. No escalation records were found for any of the 23 alerts. Three alerts were re-opened within 72 hours of closure with identical or similar signatures on the same assets.
+CSE-042's investigation depth declined 70% over four quarters while alert volume remained constant. Median investigation depth fell from 7.2 evidence entries per alert (Q1) to 2.1 entries (Q4). A statistical change point was detected in Q3. Closure velocity improved concurrently. Peer comparison shows CSE-042 is now at the 5th percentile for investigation depth among 8 telecom-sector SOCs of similar size and claimed capabilities.
 
 **Evidence:**
 
-| Alert ID | Severity | Open Time | Close Time | Duration | Investigation Note Similarity | Escalation Record | Reopen Count |
-|----------|----------|-----------|------------|----------|-------------------------------|-------------------|--------------|
-| ALT-9041 | Critical | 2025-11-03 09:14 | 2025-11-03 09:31 | 17 min | 0.94 | Absent | 1 |
-| ALT-9042 | Critical | 2025-11-03 10:05 | 2025-11-03 10:22 | 17 min | 0.91 | Absent | 1 |
-| ALT-9043 | Critical | 2025-11-04 14:20 | 2025-11-04 14:37 | 17 min | 0.96 | Absent | 0 |
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| Quarter | Avg Evidence Entries | Median Closure Time | Peer Percentile |
+|---------|---------------------|---------------------|-----------------|
+| Q1 2024 | 7.2 | 4.2 hours | 45th |
+| Q2 2024 | 6.8 | 3.8 hours | 42nd |
+| Q3 2024 | 3.1 | 2.5 hours | 12th ← Change point |
+| Q4 2024 | 2.1 | 1.8 hours | 5th |
+
+**Temporal Analysis:**  
+Change-point detection algorithm (PELT with penalty=BIC) identifies Q3 2024 as structural break. Before: mean=7.0, stdev=0.8. After: mean=2.6, stdev=0.5. Decline is statistically significant (t-test, p<0.001).
 
 **Peer Comparison:**  
-CSE-017's critical-alert closure velocity is at the 3rd percentile of the peer group. Note similarity scores are at the 92nd percentile. Escalation completeness is at the 0th percentile for critical alerts.
+CSE-042 is in a peer group of 8 telecom-sector SOCs (±20% asset size, same claimed detection capabilities). Peer median investigation depth: 6.1 entries. CSE-042: 2.1 entries (z-score: -3.2).
+
+**Possible Causes (for examiner to assess):**
+1. Staff turnover or reduced staffing
+2. Increased alert volume without corresponding resource increase
+3. Process shortcuts introduced without oversight
+4. Change in investigation quality standards
+5. Data reporting gap (investigations happening but not documented)
 
 **Recommended Action:**  
-Prioritise investigation and escalation records for CSE-017 for manual review. Examiner should verify whether closures reflect genuine resolution or premature closure, and whether escalation procedures were bypassed or undocumented.
+Prioritise investigation and staffing records for CSE-042 for manual review. Examiner should verify: (a) Whether depth decline corresponds to staffing/workload changes. (b) Whether investigation shortcuts create actual risk. (c) Whether escalation process still appropriately routes cases.
 
-**Confidence:** High (consistent signal across multiple dimensions; peer deviation confirmed)
+**Confidence:** High (consistent signal across multiple dimensions; statistical significance confirmed; peer deviation confirmed)
+
+**Caveats:**  
+- Alert volume remained stable; no workload increase explains the decline
+- Peer comparison assumes comparable alert severity mix
+- Change-point detection requires at least 4 data points; earlier periods unavailable
 
 ---
 
-This finding does not conclude that CSE-017 is non-compliant. It states that **potential supervisory concern exists and human examination is warranted.**
+This finding does not conclude that CSE-042 is non-compliant. It states that **potential supervisory concern exists and human examination is warranted.**
 
 ---
 
@@ -304,6 +439,7 @@ The dashboard is designed for NCIIPC supervisors and examiners. It is a decision
 - **Manual Review Queue:** Prioritised list of alerts, cases, and investigation samples recommended for examiner review.
 - **Finding Detail & Evidence Drill-Down:** For any finding, drill into contributing records, source data, and detection rationale.
 - **Trend Analysis:** Time-series views of entity scores, finding counts, and metric distributions across submission periods.
+- **Signal Fusion View:** Shows how multiple weak signals combine into high-confidence supervisory cases.
 
 The dashboard emphasises **traceability, context, and actionability** over visual flair.
 
@@ -323,6 +459,25 @@ SAT-SA works with structured, periodic submissions from CSEs. Raw packet capture
 | Escalation records | Escalation ID, linked alert/case ID, escalation level, timestamp, recipient | Yes |
 | Alert disposition & closure | Closure reason, closure method, re-open count | Yes |
 | Asset & system inventory | Asset ID, criticality, category, owner, environment | Recommended |
+
+### Standard Fields
+
+```python
+# Alert
+alert_id, timestamp, source, severity, category, description, asset_id, status, closure_timestamp
+
+# Investigation
+investigation_id, alert_id, timestamp_open, timestamp_close, evidence_entries, assigned_to, depth_score
+
+# Escalation
+escalation_id, investigation_id, timestamp, decision, rationale, recipient
+
+# Case
+case_id, related_alerts, case_type, severity, closure_time, resolution
+
+# Inventory
+asset_id, asset_type, criticality, monitoring_status
+```
 
 ### Supported Formats
 
@@ -367,20 +522,24 @@ No runtime calls are made to external services, APIs, or cloud endpoints.
 
 SAT-SA employs a **hybrid deterministic-first** analytics strategy.
 
-**Deterministic analytics (primary):**
+### Deterministic Analytics (Primary)
 
 - Rule-based execution-gap and negative-space detection
 - Statistical thresholding and outlier detection
 - Peer benchmarking and percentile computation
 - Completeness checks and coverage gap analysis
+- Workflow integrity validation (state machine)
+- Expected-evidence gap quantification
 
 Deterministic methods are preferred because they are auditable, reproducible, and explainable by design.
 
-**Statistical / ML augmentation (where justified):**
+### Statistical / ML Augmentation (Where Justified)
 
-- Anomaly detection on multivariate operational patterns
-- Repetition and similarity scoring for investigation notes
-- Temporal trend change-point detection
+- Anomaly detection on multivariate operational patterns (Isolation Forest, LOF)
+- Repetition and similarity scoring for investigation notes (NLP text classification)
+- Temporal trend change-point detection (CUSUM, PELT algorithm)
+- Unsupervised clustering of CSEs to discover hidden patterns (k-means, DBSCAN)
+- KPI-reality divergence correlation analysis
 
 ML components, if used, are:
 
@@ -391,9 +550,572 @@ ML components, if used, are:
 
 AI is not used for marketing purposes. It is used only where it provides measurable analytical value beyond deterministic methods.
 
+### Where Is the AI?
+
+AI is not the center of SAT-SA. The system uses:
+
+1. **Deterministic logic** for workflow integrity analysis and evidence tracing
+2. **Statistical methods** for change-point detection, anomaly identification, and peer comparison
+3. **Optional local ML** for text classification of investigation notes, unsupervised clustering of CSEs, and time-series forecasting
+
+All ML is **offline, local, explainable, and optional**. No external APIs or cloud dependencies. No generic ChatGPT wrappers. Every ML component has a clear supervisory purpose and explainability mechanism.
+
 ---
 
-## 14. Validation Methodology
+## 14. Novel Supervisory Signals
+
+SAT-SA implements 8 signal groups beyond conventional anomaly detection. These are the signals that make SAT-SA genuinely different from a generic dashboard.
+
+### Signal Group 1: Evidence Chain Integrity
+
+Models SOC operations as workflows with expected state transitions. Detects:
+- Missing transitions (critical alert → no investigation → direct closure)
+- Contradictory evidence (alert severity "critical" but closure rationale "benign")
+- Temporal implausibility (alert→closure in 2 minutes for critical event)
+- Incomplete chains (investigation without escalation decision)
+- Premature closure (closure before post-incident review period)
+
+### Signal Group 2: Expected-Evidence Presence
+
+For each CSE, builds an expected-evidence model based on asset inventory, claimed capabilities, and historical baselines. Detects:
+- Alert volume gaps (expected vs. observed)
+- Missing alert categories (EDR deployed but no endpoint alerts)
+- Investigation ratio gaps (high-severity alerts with no investigation)
+- Evidence artifact absence (escalation without threat-intel lookup)
+
+### Signal Group 3: Behavioral Drift & Change Points
+
+Uses change-point detection (CUSUM, PELT) to identify when SOC behavior shifts:
+- Investigation depth degradation over time
+- Closure velocity changes
+- Escalation propensity shifts
+- Alert volume anomalies
+- Investigation quality trends
+
+### Signal Group 4: KPI-vs-Operational-Reality Divergence
+
+Compares reported metrics against operational quality:
+- If SLA compliance improves but investigation depth declines → potential gaming
+- If closure rate improves but evidence quality decreases → superficial closures
+- If escalation count increases but remediation evidence decreases → no follow-through
+
+### Signal Group 5: Peer Relative Behavior (Smart Peer Grouping)
+
+Normalized peer analytics that avoid false positives:
+- Controls for alert mix, asset count, staffing, sector norms
+- Identifies consistent outliers, recent outliers, unexplained similarities
+- Distinguishes healthy outliers from concerning deviations
+
+### Signal Group 6: Cyclical & Temporal Anomalies
+
+Detects temporal patterns that signal problems:
+- Unexpected quiet periods during peak threat hours
+- After-hours absence for critical systems
+- Weekend gaps in escalations
+- Periodic bulk closures (Friday backlog clearing)
+- Shift-based quality variance
+
+### Signal Group 7: Negative Space Specificity
+
+Seven types of absence detection:
+1. Telemetry absence (expected log sources missing)
+2. Alert absence (expected alert categories absent)
+3. Investigation absence (high-severity alerts with no investigation record)
+4. Escalation absence (alerts meeting criteria but not escalated)
+5. Response absence (escalations with no documented response)
+6. Trend absence (expected time-series patterns missing)
+7. Evidence absence (investigation closed but key artifacts not mentioned)
+
+### Signal Group 8: Investigation Quality Heuristics
+
+Detects shallow investigation through:
+- Templated vs. contextual investigation notes (NLP)
+- Temporal implausibility (duration vs. complexity mismatch)
+- Evidence audit (presence/absence of specific evidence types)
+- Consistency checks (identical investigations closed identically)
+
+---
+
+## 15. Signal Fusion & Supervisory Case Generation
+
+Individual signals are often weak. SAT-SA fuses multiple corroborating signals into higher-confidence **supervisory cases**.
+
+### How Signal Fusion Works
+
+```
+Signal 1: Closure velocity ↓ by 30%  (Confidence: 60%)
+Signal 2: Investigation depth ↓ by 40% (Confidence: 55%)
+Signal 3: Escalation count ↓ by 50% (Confidence: 50%)
+Signal 4: Peer deviation: 2.5σ (Confidence: 70%)
+Signal 5: Alert volume constant (Confidence: 90%)
+
+Fusion: Multiple weak signals → Supervisory Case
+       Combined confidence: 85% (higher than individual signals)
+       Case: "Likely investigation effectiveness degradation"
+       Recommended review: Sample recent investigations for depth audit
+```
+
+### Signal Fusion Principles
+
+1. **Correlation, not independence:** Signals are grouped if they likely indicate the same underlying issue
+2. **Confidence aggregation:** Combined confidence exceeds individual signal thresholds
+3. **Diversity bonus:** Multiple signal types increase case credibility
+4. **Actionability:** Cases must be actionable for examiners
+
+### Supervisory Case Structure
+
+Each case includes:
+- Case ID and entity reference
+- List of contributing signals
+- Priority score (0.0-1.0)
+- Combined confidence
+- Severity classification
+- Human-readable summary
+- Collated evidence
+- Recommended examiner actions
+- Caveats and alternative explanations
+
+---
+
+## 16. Implementation Roadmap
+
+### Module 1: Data Ingestion & Normalisation
+
+```python
+class SATSADataPipeline:
+    """Ingest CSE submissions, normalize to unified schema, validate quality."""
+    
+    def ingest_cse_submission(self, cse_id, data_format, data_source):
+        # Parse format (CSV, JSON, XLSX, database export)
+        # Validate against schema
+        # Transform to standard schema
+        # Check for data quality issues
+        # Return normalized dataset + validation report
+```
+
+### Module 2: Behavioral Profile Extraction
+
+```python
+class BehavioralProfiler:
+    """Extract behavioral features from normalized CSE data."""
+    
+    def build_cse_profile(self, cse_id, period_data):
+        profile = {
+            'cse_id': cse_id,
+            'period': period_data.date_range,
+            'alert_volume': self._calc_alert_volume(period_data),
+            'alert_severity_distribution': self._calc_severity_dist(period_data),
+            'investigation_depth': self._calc_investigation_depth(period_data),
+            'closure_velocity': self._calc_closure_velocity(period_data),
+            'escalation_rate': self._calc_escalation_rate(period_data),
+            'workflow_integrity': self._calc_workflow_integrity(period_data),
+            'evidence_completeness': self._calc_evidence_completeness(period_data),
+            'temporal_patterns': self._detect_temporal_patterns(period_data),
+            'quality_trend': self._calc_quality_trend(period_data),
+        }
+        return profile
+```
+
+### Module 3: Expected Evidence Model
+
+```python
+class ExpectedEvidenceModel:
+    """Build CSE-specific expected model, compare observed vs expected."""
+    
+    def build_expected_model(self, cse_id, cse_claims, asset_inventory, historical_data):
+        model = {
+            'expected_alert_volume': self._estimate_alert_volume(...),
+            'expected_alert_categories': self._estimate_alert_categories(...),
+            'expected_investigation_ratio': self._estimate_investigation_ratio(...),
+            'expected_escalation_rate': self._estimate_escalation_rate(...),
+            'expected_evidence_artifacts': self._estimate_evidence_artifacts(...),
+        }
+        return model
+    
+    def compare_observed_vs_expected(self, observed_profile, expected_model):
+        # Returns dict of gaps with severity, confidence, likely_cause
+        pass
+```
+
+### Module 4: Execution Gap Engine
+
+```python
+class ExecutionGapEngine:
+    """Detect patterns where claimed capabilities don't match operational evidence."""
+    
+    def detect_execution_gaps(self, cse_id, profile, expected_model, historical):
+        findings = []
+        findings.extend(self._detect_superficial_closures(profile))
+        findings.extend(self._detect_escalation_without_action(profile))
+        findings.extend(self._detect_quality_degradation(profile, historical))
+        findings.extend(self._detect_template_investigations(profile))
+        findings.extend(self._detect_severity_mismatch(profile))
+        return findings
+```
+
+### Module 5: Negative Space Engine
+
+```python
+class NegativeSpaceEngine:
+    """Detect missing evidence that should be present."""
+    
+    def detect_negative_space(self, cse_id, observed_profile, expected_model):
+        findings = []
+        gaps = self.compare_observed_vs_expected(observed_profile, expected_model)
+        for gap_name, gap_data in gaps.items():
+            severity = self._assess_gap_severity(gap_name, gap_data, cse_id)
+            if severity and severity['confidence'] > 0.7:
+                findings.append({...})
+        return findings
+```
+
+### Module 6: Peer Benchmarking Engine
+
+```python
+class PeerBenchmarkingEngine:
+    """Compare entity behavior against normalized peer baselines."""
+    
+    def build_peer_groups(self, all_cse_profiles, metadata):
+        # Feature extraction for grouping
+        # Clustering (k-means, DBSCAN, or hierarchical)
+        # Label clusters by characteristics
+        pass
+    
+    def benchmark_cse_vs_peers(self, cse_id, cse_profile, peer_group_profiles):
+        # Normalized z-scores and percentiles
+        # Deviation flags
+        pass
+```
+
+### Module 7: Supervisory Case Engine
+
+```python
+class SupervisoryCaseEngine:
+    """Fuse multiple weak signals into higher-confidence findings."""
+    
+    def generate_supervisory_cases(self, cse_id, execution_gaps, 
+                                   negative_space_gaps, anomalies, peer_outliers):
+        all_signals = execution_gaps + negative_space_gaps + anomalies + [peer_outliers]
+        cases = self._cluster_signals_into_cases(all_signals)
+        scored_cases = [self._score_case(case) for case in cases]
+        scored_cases.sort(key=lambda c: c['priority_score'], reverse=True)
+        return scored_cases
+```
+
+### Module 8: Explainability Engine
+
+```python
+class ExplainabilityEngine:
+    """Provide clear rationale for every finding, trace evidence to source."""
+    
+    def generate_finding_explanation(self, finding):
+        explanation = {
+            'what_was_detected': self._describe_finding(finding),
+            'why_detected': self._explain_detection_logic(finding),
+            'evidence_records': self._trace_source_records(finding),
+            'detection_method': self._describe_method(finding),
+            'confidence': finding.get('confidence', 0.5),
+            'caveats': self._list_caveats(finding),
+            'alternative_explanations': self._list_alternatives(finding),
+            'recommended_examiner_actions': self._recommend_actions(finding),
+        }
+        return explanation
+```
+
+---
+
+## 17. Technology Stack
+
+All components are open-source and suitable for air-gapped deployment.
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React or Vue.js | Dashboard, finding review, report generation |
+| **Backend** | Python (FastAPI or Flask) | Ingestion, analytics orchestration, API |
+| **Analytics** | Python / Pandas / NumPy / SciPy | Data processing, feature extraction, statistical analysis |
+| **Database** | PostgreSQL + JSONB | Structured storage of submissions, findings, evidence |
+| **ML/AI (optional)** | Scikit-learn | Anomaly detection, similarity scoring, clustering |
+| **Deployment** | Docker / standalone Python | Offline packaging and local execution |
+| **Testing** | Pytest | Unit tests, integration tests, validation harness |
+
+Technologies are selected for offline compatibility, auditability, and minimal external dependencies.
+
+---
+
+## 18. Project Structure
+
+```
+SIH/
+├── README.md
+├── src/
+│   ├── ingestion/          # Data ingestion, validation, normalisation
+│   │   ├── pipeline.py
+│   │   ├── schema.py
+│   │   └── validators.py
+│   ├── analytics/          # Supervisory analytics engines
+│   │   ├── execution_gaps.py
+│   │   ├── negative_space.py
+│   │   ├── expected_evidence.py
+│   │   ├── temporal_drift.py
+│   │   ├── benchmarking.py
+│   │   ├── kpi_divergence.py
+│   │   ├── temporal_anomalies.py
+│   │   ├── investigation_quality.py
+│   │   ├── signal_fusion.py
+│   │   └── scoring.py
+│   ├── evidence/           # Finding construction and evidence tracing
+│   │   ├── tracer.py
+│   │   └── explainer.py
+│   ├── api/                # Backend API
+│   │   └── routes.py
+│   └── dashboard/          # Frontend dashboard
+│       ├── components/
+│       └── views/
+├── data/
+│   ├── schemas/            # Ingestion schemas and validation rules
+│   ├── samples/            # Sample CSE datasets for demonstration
+│   └── config/             # Analytics thresholds, peer group definitions
+├── tests/                  # Unit and integration tests
+├── docs/                   # Additional documentation
+├── requirements.txt        # Python dependencies
+├── docker-compose.yml      # Deployment configuration
+└── .env.example            # Configuration template
+```
+
+---
+
+## 19. Installation
+
+### Prerequisites
+
+- Python 3.9+
+- Docker (for containerised deployment)
+- PostgreSQL (for structured data storage)
+
+### Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd SIH
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with local paths and settings
+
+# Initialise database
+# (Commands to be provided as implementation progresses)
+
+# Run application
+# (Commands to be provided as implementation progresses)
+```
+
+### Offline Execution
+
+All commands above require no Internet connectivity after initial repository cloning and dependency installation. For fully air-gapped deployment, dependencies should be packaged and transferred to the NCIIPC environment.
+
+---
+
+## 20. Demo Workflow
+
+A typical 2-minute demonstration for SIH evaluators:
+
+### [0:00-0:05] Introduction
+"This is SAT-SA: Supervisory Analytics Tool for SOC Assessment. It analyzes operational evidence from Security Operations Centres across multiple Critical Sector Entities.
+
+Unlike a SIEM or dashboard, SAT-SA asks a different question: 'Is the SOC actually operating effectively, and where should a supervisor look next?'"
+
+### [0:05-0:15] Data Ingestion
+"We load quarterly submissions from 50 CSEs — their alerts, investigations, escalations, and asset inventory.
+
+SAT-SA normalizes heterogeneous data into a unified analytical schema, then applies supervisory analytics across seven layers: workflow integrity, expected-evidence validation, temporal drift detection, peer benchmarking, signal fusion, unsupervised pattern discovery, and explainability."
+
+### [0:15-0:30] Portfolio Overview
+"Here's the portfolio view. 50 entities analyzed. 8 with supervisory findings requiring attention. Ranked by priority.
+
+Notice: Entities ranked not just by 'risk score', but by evidence-backed supervisory findings. Let me click on CSE-042, which has a HIGH-priority finding."
+
+### [0:30-0:45] Entity Deep Dive
+"This is CSE-042's behavioral profile. Investigation depth over the last 4 quarters shows a concerning trend: Q1: 7.2 entries per alert, Q2: 6.8, Q3: 3.1 — change point detected — Q4: 2.1 entries.
+
+Statistical significance: HIGH. Alert volume stayed constant. So why did investigation depth collapse? That's a supervisory question."
+
+### [0:45-1:00] Supervisory Case
+"Here's the supervisory case generated from multiple signals:
+
+CASE: CSE-042 Investigation Effectiveness Degradation
+SIGNALS:
+1. Investigation depth declined 70%
+2. Closure velocity improved (faster closures)
+3. Alert volume unchanged (no workload increase)
+4. Peer deviation: bottom 5% for investigation depth
+
+CONFIDENCE: HIGH
+EVIDENCE: 127 investigations analyzed over 4 quarters"
+
+### [1:00-1:15] Evidence Drill-Down
+"Each signal traces back to actual records. Investigation ID 042-8821. High-severity alert. Closed in 3 hours. Investigation notes show 2 evidence entries: 'Reviewed firewall logs' and 'Alert appears benign'.
+
+Compare to an identical alert type from Q1: 10 entries, 14-hour investigation, detailed threat assessment, preventive action documented.
+
+Same alert type. Same severity. Same CSE. Completely different investigation quality. That's an execution gap."
+
+### [1:15-1:30] Peer Comparison
+"CSE-042 is in a peer group with 8 other telecom-sector SOCs. Their investigation depth distribution: CSE-042 (red dot, bottom) is a significant outlier.
+
+Two questions for an NCIIPC examiner: Is CSE-042's approach justified? Or is this a sign of degraded capability? That's why it's a finding, not a conclusion."
+
+### [1:30-1:45] Recommended Action
+"Here's the recommended manual review action: 'Sample 5 recent high-severity investigations from CSE-042. Assess: (a) Investigation depth vs. alert severity. (b) Whether quality decline corresponds to staffing changes. (c) Whether escalation process still appropriately routes cases.'
+
+The system identifies the question. The examiner answers it."
+
+### [1:45-2:00] Positioning
+"What makes SAT-SA different: Every finding is evidence-backed. Every recommendation is explainable. No black-box risk scores. No unsupported conclusions.
+
+The system transforms raw data into signals → evidence → priorities. The examiner remains in control. The system extends their reach."
+
+---
+
+## 21. Strengthened SIH Pitch
+
+### One-Sentence Pitch
+"SAT-SA extends NCIIPC's supervisory reach from sampling individual CSEs to portfolio-wide behavioral analysis, detecting operational weaknesses and evidence gaps that self-reported metrics and conventional dashboards structurally cannot reveal."
+
+### 30-Second Pitch
+"NCIIPC supervises critical infrastructure by manually reviewing SOC operational evidence. Manual review is thorough but doesn't scale. SAT-SA applies supervisory analytics to periodic CSE submissions, identifying entities and operational areas warranting examination.
+
+Unlike a SIEM or KPI dashboard, SAT-SA models SOC operations as workflows and behavioral systems. It detects execution gaps (reported capability doesn't match operational evidence), negative space (missing expected evidence), quality degradation, and peer outliers — then traces findings back to specific records for examiner validation.
+
+The result: NCIIPC can maintain supervisory coverage at portfolio scale while preserving the depth and rigor of expert human examination."
+
+### 1-Minute Explanation
+"The core supervisory problem NCIIPC faces is that CSE self-reports and documented policies often diverge from operational reality. A SOC can claim '99% alert response SLA' while investigations are shallow and template-driven. It can report 'critical incident escalation' while escalations are logged but not acted upon.
+
+Manual expert review catches these gaps reliably — but only across samples. As the portfolio grows, sampling becomes inadequate.
+
+SAT-SA addresses this by:
+
+1. **Ingesting periodic structured data** from CSEs (alerts, investigations, escalations, closure records, asset inventory)
+
+2. **Building behavioral profiles** of each SOC (investigation depth, closure velocity, escalation patterns, workload distribution, quality trends)
+
+3. **Detecting supervisory signals** through seven analytical layers:
+   - Workflow integrity analysis (are investigations actually happening or just closed?)
+   - Expected-evidence comparison (what should we observe given the CSE's claims?)
+   - Temporal drift detection (has operational behavior changed?)
+   - Peer relative analysis (is this CSE an outlier and why?)
+   - KPI-reality divergence (do reported metrics reflect actual effectiveness?)
+   - Signal fusion (multiple weak signals → higher-confidence findings)
+   - Unsupervised pattern discovery (find hidden portfolio-wide patterns)
+
+4. **Generating supervisory cases** rather than generic alerts — structured findings that trace back to specific records, explain the concern, and recommend what an examiner should review
+
+5. **Maintaining examiner control** — the system identifies opportunities for oversight; examiners make supervisory judgments
+
+The technical innovation is in the analytical specificity. Rather than asking 'is this CSE at risk?' (which requires subjective judgment), SAT-SA asks 'are these specific operational patterns consistent with effective detection and response?' and then surfaces the evidence."
+
+### Why This Is Different From a SIEM
+"A SIEM processes live events in real time to detect attacks and generate operational alerts.
+
+SAT-SA processes **periodic, historical operational data** to detect **supervisory gaps** — moments where reported capability diverges from evidence.
+
+SIEMs ask: 'Is there an attack?'
+SAT-SA asks: 'Is the SOC operating effectively?'
+
+These are fundamentally different questions that require different architectures and analytics."
+
+### How Do You Detect Negative Space?
+"Negative space (missing expected evidence) is inherently ambiguous. Our approach:
+
+1. **Build CSE-specific expected models** based on claimed capabilities, asset inventory, and historical baselines
+2. **Compare observed vs. expected** across multiple evidence types
+3. **Assess gap severity** by distinguishing legitimate absence from data-reporting gaps vs. real monitoring gaps
+4. **Surface absences systematically** rather than rely on examiner to notice them"
+
+### How Do You Avoid False Positives?
+"SAT-SA reduces false positives through:
+
+1. **Signal fusion:** Single weak signals don't trigger findings. Multiple corroborating signals required.
+2. **Peer context:** Outlier detection uses normalized peer comparison, not global thresholds.
+3. **Trend validation:** Sudden changes flagged; one-off anomalies often ignored.
+4. **Examiner-in-the-loop:** System generates candidates; examiners validate before escalation.
+5. **Iterative calibration:** Validation against manual reviews; thresholds adjusted based on precision/recall tradeoffs.
+
+Honest constraint: Some false positives are unavoidable. But better to show a borderline case and let examiner judge than to miss real issues."
+
+### How Do You Validate It?
+"Validation approach:
+
+1. **Synthetic test cases:** Inject known supervisory weaknesses into historical CSE data; verify detection.
+2. **Historical blind validation:** Run SAT-SA against CSEs where NCIIPC already conducted manual supervisory reviews; compare findings.
+3. **Precision & recall:** Measure detection rate for known issues; measure false positive rate.
+4. **Examiner agreement:** Have independent examiners review SAT-SA findings; measure alignment with expert judgment.
+5. **Scalability testing:** Run on full portfolio; ensure 2-4 week turnaround for periodic submissions.
+
+Honest constraint: Validation is limited by NCIIPC's historical supervisory review data. We propose an iterative process where initial deployment generates data for subsequent model refinement."
+
+### If 100 Other Teams Read This Same Problem Statement, What Would Stop Them From Building the Same Thing?
+
+Most teams would likely build:
+1. A KPI dashboard (easy, familiar, but misses the point)
+2. An anomaly detection system (generic, not supervisory)
+3. A SIEM-lite with rule-based alerting (out of scope)
+4. A ChatGPT wrapper that generates "insights" (fake novelty)
+5. A risk-scoring model (opaque, not aligned with evidence)
+
+**What stops them from building SAT-SA's core:**
+
+1. **Expected-Evidence Modeling is non-obvious.** It requires conceptualizing "what should be present if the SOC were working correctly" — that's a supervisory insight, not a technical insight. Most engineers jump to "flag outliers" instead.
+
+2. **Workflow integrity analysis requires graph-structured thinking.** Most engineers think in terms of rows and columns, not workflows and chains. Detecting broken evidence chains requires modeling SOC operations as processes.
+
+3. **Signal fusion and supervisory case generation** isn't "interesting" in isolation. But combining weak signals into credible cases requires Bayesian reasoning or explicit correlation logic — that's unusual for a hackathon project.
+
+4. **The peer-grouping problem is harder than it looks.** Naive peer comparison produces false positives (entities ARE different). Smart peer grouping requires clustering, normalization, and understanding that "similar" must be defined carefully.
+
+5. **Explainability as a first-class requirement** pushes back against black-box approaches. Most teams want to train a model and ship it. SAT-SA requires designing findings they can explain to NCIIPC examiners.
+
+6. **Validation against expert human judgment** is conceptually different from typical ML validation. Most teams optimize for F1-score or AUROC. SAT-SA should optimize for alignment with examiner assessment — that requires a different validation methodology.
+
+**The Single Architectural Idea That Makes This Unique:**
+
+**"Model each CSE's operational data not as independent events, but as an evidence-generation system. Detect supervisory gaps by comparing observed evidence to expected evidence, where expectations are built from CSE claims, asset inventory, and historical baselines. Generate findings only when observed ≠ expected AND evidence suggests a real gap (not a data artifact). Fuse multiple weak signals into high-confidence supervisory cases. Preserve examiner authority by making every finding traceable to specific records."**
+
+This idea isn't "ML-based" or "AI-powered" (buzzwords). It's a specific analytical philosophy: **Evidence-Integrity Analysis through Expected-Value Comparison and Signal Fusion.**
+
+---
+
+## 22. Architecture Comparison
+
+Five distinct architectural approaches were evaluated:
+
+| Dimension | A: Graph | B: Bayesian | C: Drift | D: Fusion | E: Clustering |
+|-----------|----------|-----------|---------|----------|--------------|
+| Novelty | 8 | 9 | 8 | 8 | 8 |
+| Feasibility | 7 | 8 | 9 | 9 | 8 |
+| Explainability | 9 | 7 | 9 | 8 | 6 |
+| Detects Execution Gaps | 9 | 7 | 9 | 9 | 7 |
+| Detects Negative Space | 5 | 9 | 5 | 7 | 5 |
+| Finds KPI Divergence | 6 | 8 | 9 | 9 | 7 |
+| Peer Analysis | 4 | 6 | 6 | 8 | 9 |
+| Implementable in 2-3mo | 8 | 6 | 8 | 9 | 7 |
+| Demo Clarity | 8 | 7 | 9 | 9 | 6 |
+| SIH Judge Appeal | 7 | 8 | 8 | 9 | 8 |
+| Risk of Scope Creep | 4 | 5 | 3 | 3 | 6 |
+
+**Recommended approach: Hybrid** — combining elements of all five architectures in a layered pipeline.
+
+---
+
+## 23. Validation Methodology
 
 SIH26157 requires that the solution be validated against findings derived from expert manual review. SAT-SA's validation approach is:
 
@@ -414,195 +1136,37 @@ No benchmark performance numbers are fabricated. Validation results, including l
 
 ---
 
-## 15. Innovation
+## 24. Key Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| **Data quality issues** (incomplete submissions) | Build quality scoring; flag low-confidence findings |
+| **False positives** (legitimate behavior flagged as concerning) | Signal fusion + peer context; examiner validation |
+| **Peer group relevance** (comparing incomparable entities) | Smart clustering with normalization factors |
+| **Threshold calibration** (tuning detection sensitivity) | Validation against manual reviews; adaptive thresholds |
+| **Scope creep** (temptation to add real-time SOC features) | Strict enforcement of "supervisory" vs. "operational" boundary |
+| **Explainability failures** (findings that can't be explained) | Record-level tracing mandatory; black-box findings rejected |
+
+---
+
+## 25. Innovation
 
 SAT-SA's meaningful innovation lies in applying structured supervisory analytics to SOC operational evidence at scale, specifically in the following areas:
 
-- **Execution-gap analytics at scale:** Systematic detection of divergence between reported capability and operational behaviour across multiple CSEs.
-- **Negative-space analytics:** Structured identification of absent evidence as a supervisory signal, addressing a traditionally invisible class of weakness.
-- **KPI/risk divergence:** Comparative analysis of reported metrics against operational outcomes to identify illusion-of-compliance patterns.
-- **Supervisory attention prioritisation:** Translation of heterogeneous signals into a ranked review queue that respects limited examiner time.
-- **Cross-CSE peer benchmarking:** Contextualisation of entity behaviour within a portfolio, enabling NCIIPC to spot outliers and sector-wide patterns.
-- **Evidence-backed findings:** Every finding is traceable to source records and detection logic, preserving the auditability of manual review in an automated system.
+- **Evidence-integrity analysis:** Modeling SOC operations as workflows and detecting broken evidence chains — fundamentally different from alert-centric dashboards
+- **Expected-value comparison:** Building CSE-specific models of "what should be observed" and comparing against actual evidence — requires supervisory insight, not just data analysis
+- **Negative-space quantification:** Systematic identification of absent evidence as a supervisory signal, addressing a traditionally invisible class of weakness
+- **Signal fusion architecture:** Combining multiple weak signals into high-confidence supervisory cases through correlation and Bayesian reasoning
+- **KPI-reality divergence detection:** Comparative analysis of reported metrics against operational outcomes to identify illusion-of-compliance patterns
+- **Supervisory attention prioritisation:** Translation of heterogeneous signals into a ranked review queue that respects limited examiner time
+- **Cross-CSE peer benchmarking:** Contextualisation of entity behaviour within a portfolio using smart peer grouping and normalization
+- **Evidence-backed findings:** Every finding is traceable to source records and detection logic, preserving the auditability of manual review in an automated system
 
-Ordinary dashboards, CRUD systems, and generic AI chatbots are not innovative in this context. SAT-SA is innovative because it operationalises a specific, underserved supervisory methodology.
-
----
-
-## 16. Technology Stack
-
-The prototype uses the following stack. All components are open-source and suitable for air-gapped deployment.
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | (To be determined based on prototype implementation) | Dashboard, finding review, report generation |
-| **Backend** | (To be determined based on prototype implementation) | Ingestion, analytics orchestration, API |
-| **Analytics** | Python / Pandas / NumPy (planned) | Data processing, feature extraction, statistical analysis |
-| **Database** | (To be determined based on prototype implementation) | Structured storage of submissions, findings, evidence |
-| **ML/AI** | Scikit-learn (if applicable) | Anomaly detection, similarity scoring |
-| **Deployment** | Docker / standalone Python (planned) | Offline packaging and local execution |
-| **Testing** | (To be determined based on prototype implementation) | Unit tests, integration tests, validation harness |
-
-Technologies are selected for offline compatibility, auditability, and minimal external dependencies.
+Ordinary dashboards, CRUD systems, and generic AI chatbots are not innovative in this context. SAT-SA is innovative because it operationalises a specific, underserved supervisory methodology: **Evidence-Integrity Analysis through Expected-Value Comparison and Signal Fusion.**
 
 ---
 
-## 17. Project Structure
-
-```
-SIH/
-├── README.md
-├── src/
-│   ├── ingestion/          # Data ingestion, validation, normalisation
-│   ├── analytics/          # Supervisory analytics engines
-│   │   ├── execution_gaps.py
-│   │   ├── negative_space.py
-│   │   ├── anomaly.py
-│   │   ├── benchmarking.py
-│   │   └── scoring.py
-│   ├── evidence/           # Finding construction and evidence tracing
-│   ├── api/                # Backend API (if applicable)
-│   └── dashboard/          # Frontend dashboard (if applicable)
-├── data/
-│   ├── schemas/            # Ingestion schemas and validation rules
-│   ├── samples/            # Sample CSE datasets for demonstration
-│   └── config/             # Analytics thresholds, peer group definitions
-├── tests/                  # Unit and integration tests
-├── docs/                   # Additional documentation
-├── requirements.txt        # Python dependencies
-├── docker-compose.yml      # Deployment configuration (if applicable)
-└── .env.example            # Configuration template
-```
-
-> **Note:** This structure reflects the planned organisation. Actual implementation status should be verified against repository contents. Directories and files will be added as development progresses.
-
----
-
-## 18. Installation
-
-### Prerequisites
-
-- Python 3.9+ (if Python-based)
-- (Additional prerequisites to be documented as implementation progresses)
-
-### Setup
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd SIH
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with local paths and settings
-
-# Initialise database (if applicable)
-# (Commands to be provided as implementation progresses)
-
-# Run application
-# (Commands to be provided as implementation progresses)
-```
-
-### Offline Execution
-
-All commands above require no Internet connectivity after initial repository cloning and dependency installation. For fully air-gapped deployment, dependencies should be packaged and transferred to the NCIIPC environment.
-
----
-
-## 19. Demo Workflow
-
-A typical demonstration for SIH evaluators:
-
-1. **Load sample datasets** — Ingest sample CSE alert, case, investigation, escalation, and asset inventory data.
-2. **Normalise data** — System maps heterogeneous submissions into the common analytical schema.
-3. **Run supervisory analytics** — Execute execution-gap, negative-space, anomaly, and benchmarking engines.
-4. **Review findings** — Dashboard displays portfolio overview with entity rankings and finding lists.
-5. **Inspect a finding** — Select an execution-gap finding for CSE-017; view contributing records, detection rationale, and peer comparison.
-6. **Drill into evidence** — Open individual alert and case records that contributed to the finding.
-7. **Generate report** — Export a supervisory report for the selected entity or portfolio.
-
-Target demonstration duration: 2 minutes.
-
----
-
-## 20. Roadmap
-
-### Implemented
-- Project conceptualisation and README
-- Analytics methodology design
-- Data model and schema definition
-- Sample dataset structure
-
-### In Progress
-- Core ingestion and normalisation modules
-- Execution-gap detection engine
-- Negative-space detection engine
-- Finding and evidence engine
-- Dashboard prototype
-
-### Planned
-- Peer benchmarking module
-- Supervisory Attention Score
-- Anomaly detection
-- Trend analysis
-- Report generation
-- Validation harness
-- Offline deployment packaging
-
----
-
-## 21. SIH Alignment
-
-The following table maps SIH26157 requirements to SAT-SA capabilities.
-
-| SIH26157 Requirement | SAT-SA Capability | Evidence |
-|----------------------|-------------------|----------|
-| Ingest structured data from multiple CSEs | Multi-CSE ingestion layer | Planned: ingestion module |
-| Support CSV, JSON, database exports, APIs | Multi-format ingestion | Planned: schema-based ingestion |
-| Identify detection, investigation, escalation weaknesses | Execution Gap Engine | Planned: execution_gaps.py |
-| Detect execution gaps | Execution Gap Engine | Planned: closure velocity, escalation inconsistency, investigation depth, repetition |
-| Detect negative space | Negative Space Engine | Planned: missing telemetry, missing records, low activity, coverage gaps |
-| Identify anomalies and outliers | Anomaly Detection module | Planned: univariate, multivariate, temporal |
-| Peer comparison and benchmarking | Peer Benchmarking Engine | Planned: peer grouping, normalised metrics, deviation scoring |
-| Generate entity-level risk indicators | Supervisory Attention Score | Planned: weighted aggregation of signals |
-| Prioritise entities and samples for manual review | Manual-Review Prioritisation | Planned: finding severity and evidence strength |
-| Provide clear rationale for findings | Explainability module | Planned: detection rationale per finding |
-| Present supporting evidence | Evidence Tracing | Planned: record-level evidence per finding |
-| Support traceability and auditability | Evidence Tracing + Explainability | Planned: source record IDs, rules, thresholds logged |
-| Allow supervisors to understand why flagged | Explainability module | Planned: structured rationale |
-| Generate dashboards and reports | Dashboard & Report Engine | Planned: portfolio, entity, finding views |
-| Support trend analysis | Trend Analysis module | Planned: time-series across submission periods |
-| Enable drill-down to underlying evidence | Dashboard drill-down | Planned: record-level drill-down |
-| Operate fully offline / air-gapped | Offline-first architecture | Planned: no external runtime dependencies |
-| No cloud / SaaS / external AI API dependency | Offline-first architecture | Planned: local-only processing |
-| Validation against expert manual review | Validation Methodology | Designed: coverage, precision, examiner review, iterative refinement |
-| Support human supervisory judgment | Human-in-the-loop design | Designed: findings inform, not replace, examiner decisions |
-
----
-
-## 22. Evaluation Strategy
-
-SAT-SA addresses the SIH26157 success criteria as follows:
-
-| Success Criterion | How SAT-SA Addresses It |
-|-------------------|------------------------|
-| Efficiently analyse large volumes of SOC data across multiple CSEs | Batch ingestion, normalised schema, modular analytics pipeline designed for multi-entity, multi-period datasets |
-| Identify entities and operational areas requiring supervisory attention | Execution-gap, negative-space, and anomaly engines produce entity-level findings with evidence |
-| Prioritise manual review effort | Supervisory Attention Score and manual-review queue rank entities and samples by priority |
-| Preserve quality of supervisory assurance from expert human examination | Explainability, evidence tracing, and validation methodology ensure findings are auditable and comparable to manual review |
-| Operate in air-gapped NCIIPC environment | Offline-first deployment with no external runtime dependencies |
-| Support explainability and auditability | Every finding includes rationale, contributing records, detection method, and strength indicator |
-
----
-
-## 23. Security and Privacy
+## 26. Security and Privacy
 
 SAT-SA is designed with security and privacy as foundational constraints, not afterthoughts.
 
@@ -615,7 +1179,7 @@ SAT-SA is designed with security and privacy as foundational constraints, not af
 
 ---
 
-## 24. Limitations
+## 27. Limitations
 
 SAT-SA has inherent limitations that supervisors and examiners must understand.
 
@@ -625,12 +1189,58 @@ SAT-SA has inherent limitations that supervisors and examiners must understand.
 - **Human validation required:** SAT-SA outputs require human examiner review. The system is not autonomous.
 - **Scope of signals:** The analytics engine covers known supervisory signal categories. Novel or unprecedented operational behaviours may not be detected unless explicitly encoded.
 - **Prototype status:** As a prototype, SAT-SA's detection coverage, threshold calibration, and user experience are subject to refinement based on validation results and examiner feedback.
+- **Explainability limits:** Some statistical methods (e.g., certain ML models) are inherently less explainable. SAT-SA prefers explainable methods and documents limitations where explainability is partial.
 
 Transparency about limitations is intentional and consistent with the tool's role as a support system for human judgement.
 
 ---
 
-## 25. Team / SIH Information
+## 28. SIH Alignment
+
+The following table maps SIH26157 requirements to SAT-SA capabilities.
+
+| SIH26157 Requirement | SAT-SA Capability | Evidence |
+|----------------------|-------------------|---------|
+| Ingest structured data from multiple CSEs | Multi-CSE ingestion layer | Planned: ingestion module |
+| Support CSV, JSON, database exports, APIs | Multi-format ingestion | Planned: schema-based ingestion |
+| Identify detection, investigation, escalation weaknesses | Execution Gap Engine + 8 Signal Groups | Planned: execution_gaps.py, expected_evidence.py, investigation_quality.py |
+| Detect execution gaps | Execution Gap Engine | Planned: closure velocity, escalation inconsistency, investigation depth, repetition, workflow integrity |
+| Detect negative space | Negative Space Engine + Expected Evidence Model | Planned: missing telemetry, missing records, low activity, coverage gaps, expected-evidence comparison |
+| Identify anomalies and outliers | Anomaly Detection + Temporal Drift | Planned: univariate, multivariate, temporal, change-point detection |
+| Peer comparison and benchmarking | Peer Benchmarking Engine | Planned: smart peer grouping, normalized metrics, deviation scoring |
+| Generate entity-level risk indicators | Supervisory Attention Score | Planned: weighted aggregation of signals with confidence weighting |
+| Prioritise entities and samples for manual review | Signal Fusion + Review Queue | Planned: case prioritization, sample recommendation |
+| Provide clear rationale for findings | Explainability Engine | Planned: detection rationale, alternative explanations, caveats |
+| Present supporting evidence | Evidence Tracing | Planned: record-level evidence per finding |
+| Support traceability and auditability | Evidence Tracing + Explainability | Planned: source record IDs, rules, thresholds logged |
+| Allow supervisors to understand why flagged | Explainability Engine | Planned: structured rationale, detection method, caveats |
+| Generate dashboards and reports | Dashboard & Report Engine | Planned: portfolio, entity, finding views with drill-down |
+| Support trend analysis | Temporal Drift Detection | Planned: time-series across submission periods, change-point detection |
+| Enable drill-down to underlying evidence | Dashboard drill-down | Planned: record-level drill-down with evidence tracing |
+| Operate fully offline / air-gapped | Offline-first architecture | Planned: no external runtime dependencies |
+| No cloud / SaaS / external AI API dependency | Offline-first architecture | Planned: local-only processing |
+| Validation against expert manual review | Validation Methodology | Designed: coverage, precision, examiner review, iterative refinement |
+| Support human supervisory judgment | Human-in-the-loop design | Designed: findings inform, not replace, examiner decisions |
+
+---
+
+## 29. Evaluation Strategy
+
+SAT-SA addresses the SIH26157 success criteria as follows:
+
+| Success Criterion | How SAT-SA Addresses It |
+|-------------------|------------------------|
+| Efficiently analyse large volumes of SOC data across multiple CSEs | Batch ingestion, normalised schema, modular analytics pipeline designed for multi-entity, multi-period datasets |
+| Identify entities and operational areas requiring supervisory attention | Execution-gap, negative-space, drift, and peer benchmarking engines produce entity-level findings with evidence |
+| Prioritise manual review effort | Supervisory Attention Score and signal fusion rank entities and samples by priority |
+| Preserve quality of supervisory assurance from expert human examination | Explainability, evidence tracing, and validation methodology ensure findings are auditable and comparable to manual review |
+| Operate in air-gapped NCIIPC environment | Offline-first deployment with no external runtime dependencies |
+| Support explainability and auditability | Every finding includes rationale, contributing records, detection method, and strength indicator |
+| Detect supervisory gaps beyond conventional dashboards | 8 signal groups including workflow integrity, expected-evidence gaps, and behavioral drift |
+
+---
+
+## 30. Team / SIH Information
 
 - **Competition:** Smart India Hackathon 2026
 - **Problem Statement:** SIH26157 — Supervisory Analytics Tool for SOC Assessment (SAT-SA)
@@ -640,7 +1250,7 @@ Transparency about limitations is intentional and consistent with the tool's rol
 
 ---
 
-## 26. Final Positioning
+## 31. Final Positioning
 
 SAT-SA does not attempt to replace SOCs, SIEMs, or supervisory examiners.
 
