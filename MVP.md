@@ -26,6 +26,7 @@ The MVP must be **presentable to SIH judges** within the hackathon timeframe, wi
 | **Behavioral Profiling** | Compute per-CSE profiles: alert volume, investigation depth, closure velocity, escalation rate, evidence completeness | Core input to all detection engines |
 | **Execution Gap Engine (3 signals)** | Detect: (1) Superficial closures (fast closure + shallow depth), (2) Escalation without action, (3) Investigation quality degradation (temporal) | Directly addresses the "execution gap" problem statement |
 | **Negative Space Engine (2 signals)** | Detect: (1) Alert volume gap (expected vs. observed), (2) Missing investigations for high-severity alerts | Directly addresses the "negative space" problem statement |
+| **Expected Evidence Model** | Build CSE-specific models of "what should be observed" based on claims, assets, and history | Foundation for negative-space detection and anomaly identification |
 | **Peer Benchmarking** | Simple peer grouping by sector + size; z-score and percentile comparison | Provides context for findings |
 | **Supervisory Attention Score** | Weighted aggregation of detected signals into entity-level priority ranking | Directs limited review resources |
 | **Finding Generation with Evidence Tracing** | Structured findings with: signal type, contributing records, detection rationale, confidence, recommended review action | Core deliverable to examiners |
@@ -58,16 +59,16 @@ These features are planned but **not required** for the hackathon demo:
 │         SAMPLE DATA (Synthetic)             │
 │  50 CSEs × 4 quarters × alerts/inv/esc     │
 └──────────────────┬──────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────┐
 │         LAYER 1: INGESTION                  │
 │  • CSV/JSON parser                          │
 │  • Schema validation                        │
 │  • Quality scoring                          │
 └──────────────────┬──────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────┐
 │         LAYER 2: PROFILING                  │
 │  • Alert volume, severity distribution      │
@@ -75,10 +76,10 @@ These features are planned but **not required** for the hackathon demo:
 │  • Escalation rate, follow-through          │
 │  • Evidence completeness                    │
 └──────────────────┬──────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────┐
-│         LAYER 3: DETECTION (MVP)            │
+│   LAYER 3: SUPERVISORY ANALYTICS (5 ENGINES)│
 │  ┌─────────────────────────────────────┐   │
 │  │ Execution Gap Engine (3 signals)    │   │
 │  │ • Superficial closures              │   │
@@ -91,26 +92,28 @@ These features are planned but **not required** for the hackathon demo:
 │  │ • Missing investigations            │   │
 │  └─────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────┐   │
-│  │ Peer Benchmarking                   │   │
+│  │ Peer Benchmark Engine               │   │
 │  │ • Peer grouping (sector + size)     │   │
 │  │ • Z-score, percentile               │   │
 │  └─────────────────────────────────────┘   │
 └──────────────────┬──────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────┐
 │         LAYER 4: FINDINGS                   │
+│  • Expected Evidence Model                  │
 │  • Supervisory Attention Score              │
 │  • Finding generation with evidence trace   │
 │  • Priority ranking                         │
 └──────────────────┬──────────────────────────┘
-                   │
-                   ▼
+                    │
+                    ▼
 ┌─────────────────────────────────────────────┐
 │         LAYER 5: DASHBOARD (MVP)            │
 │  • Portfolio overview (entity rankings)     │
 │  • Entity deep-dive (profile + findings)    │
 │  • Finding detail (evidence drill-down)     │
+│  • Supervisory Finding Card                 │
 └─────────────────────────────────────────────┘
 ```
 
@@ -250,6 +253,7 @@ cse_id, sector, size_band, claimed_capabilities
 
 **Finding Detail:**
 - Finding explanation (what, why, how)
+- **Supervisory Finding Card** (priority, confidence, signal, evidence summary, affected cases, recommended action)
 - Evidence table (contributing records with IDs, timestamps, key fields)
 - Recommended examiner actions
 - Caveats and alternative explanations

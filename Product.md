@@ -103,6 +103,14 @@ To transform periodic CSE operational submissions into **evidence-backed supervi
 
 **SAT-SA Solution:** Build CSE-specific expected-evidence models based on claims and asset inventory. Compare observed vs. expected. Flag significant gaps with confidence assessment.
 
+### Problem 2a: Metric Gaming Masks Operational Decline
+
+**User Story:** As an NCIIPC examiner, I need to detect when SOC metrics are improving while actual operational effectiveness is declining, because organizations may optimize for KPIs rather than security outcomes.
+
+**Current State:** SOC reports "99% alert response SLA." Manual review reveals investigations are shallower, template-driven, and closed rapidly to meet the KPI. The metric looks healthy; the reality is degraded.
+
+**SAT-SA Solution:** Track reported KPIs alongside operational quality indicators. Flag divergence where metrics improve but evidence quality declines. Surface the gap with specific record evidence.
+
 ### Problem 3: Peer Context Is Missing
 
 **User Story:** As an NCIIPC examiner, I need to understand whether a CSE's operational behavior is normal or anomalous, because raw metrics without context are difficult to interpret.
@@ -155,6 +163,14 @@ To transform periodic CSE operational submissions into **evidence-backed supervi
 
 **MVP status:** Implemented (3 of 8 planned signals)
 
+### 5.3a Expected Evidence Model
+
+**What it does:** Builds a CSE-specific model predicting what evidence *should* be observed given claimed capabilities, asset inventory, and historical baselines. Compares observed vs. expected to detect negative space.
+
+**User value:** Makes absence of evidence visible. Detects monitoring blind spots, dead sensors, and undocumented processes systematically.
+
+**MVP status:** Implemented (core model)
+
 ### 5.4 Negative Space Engine
 
 **What it does:** Identifies expected evidence that is absent. MVP implements 2 signals: alert volume gaps and missing investigations for high-severity alerts.
@@ -186,6 +202,14 @@ To transform periodic CSE operational submissions into **evidence-backed supervi
 **User value:** Provides examiners with auditable, explainable findings that trace directly to source evidence.
 
 **MVP status:** Implemented (basic)
+
+### 5.7a Supervisory Finding Card
+
+**What it does:** Every finding is presented as a Finding Card — a structured, human-readable summary with priority, confidence, signal description, evidence summary, affected cases, and recommended actions.
+
+**User value:** Examiners can understand any finding in under 30 seconds and trace directly to deeper evidence.
+
+**MVP status:** Implemented
 
 ### 5.8 Dashboard
 
@@ -324,8 +348,9 @@ Adds to review queue for CSE-089
 
 | Product Category | Why SAT-SA Is Not It |
 |------------------|---------------------|
-| **SIEM** | SAT-SA does not monitor networks, generate alerts, or respond to incidents in real time |
-| **SOC Platform** | SAT-SA does not aggregate operational control of multiple SOCs |
+| **SOC** | SAT-SA does not monitor networks, generate alerts, or respond to incidents in real time |
+| **SIEM** | SAT-SA does not ingest raw logs, correlate events, or serve as an operational security platform |
+| **National Monitoring System** | SAT-SA does not aggregate operational control of multiple CSEs or provide live visibility |
 | **KPI Dashboard** | SAT-SA does not display SLA compliance charts or closure rate gauges |
 | **Compliance Tool** | SAT-SA does not score compliance or issue certificates |
 | **Generic AI Analytics** | SAT-SA is not a black-box ML model generating "insights" |
@@ -341,6 +366,7 @@ Adds to review queue for CSE-089
 | **Negative-Space Detection** | Systematically identifies absent evidence as a supervisory signal |
 | **Signal Fusion** | Combines weak signals into high-confidence supervisory cases |
 | **Explainable Findings** | Every finding traces to source records with clear rationale |
+| **Supervisory Digital Twin** | Creates expected-behavior models for each CSE and compares actual behavior |
 
 ### Competitive Alternatives (and why they don't solve the problem)
 

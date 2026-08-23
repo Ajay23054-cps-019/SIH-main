@@ -24,8 +24,8 @@
 | Week | Phase | Deliverable |
 |------|-------|-------------|
 | 1-2 | Foundation | Data ingestion, normalization, profiling engine |
-| 3-4 | Detection Layer 1 | Execution gap engine + negative space engine |
-| 5-6 | Detection Layer 2 | Temporal drift + peer benchmarking |
+| 3-4 | Detection Layer 1 | Execution gap engine + negative space engine + expected evidence model |
+| 5-6 | Detection Layer 2 | Temporal drift + peer benchmarking + behavioral anomalies |
 | 7-8 | Fusion & Cases | Signal fusion + supervisory case generation |
 | 9 | Dashboard | Interactive dashboard with drill-down |
 | 10 | Validation | Validation harness + synthetic test cases |
@@ -292,10 +292,12 @@ Behavioral Profile Extraction
     ↓
 Expected Evidence Model
     ↓
-├─ Execution Gap Engine
-├─ Negative Space Engine
-├─ Temporal Drift Detection
-└─ Peer Benchmarking Engine
+5 Supervisory Analytics Engines
+├── Execution Gap Engine
+├── Negative Space Engine
+├── Behavioral Anomaly Engine
+├── Peer Benchmark Engine
+└── Supervisory Evidence Engine
     ↓
 Signal Fusion & Supervisory Case Generation
     ↓

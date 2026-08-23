@@ -88,11 +88,15 @@ SAT-SA asks:
 - "Is the gap systemic or incidental?" (analytical)
 - "What should the examiner investigate first?" (prioritization)
 
-This requires **three integrated components**:
+This requires **five integrated engines**:
 
-1. **CSE-Specific Expected Model** — For each CSE, predict "normal" evidence based on claims + history
-2. **Observed-vs-Expected Comparison** — Compare actual evidence to expected, distinguishing absence from data-reporting gaps
-3. **Behavioral Fingerprinting & Change Detection** — Model each CSE's operational "normal" and detect when behavior changes
+1. **Execution Gap Engine** — "Claimed process ≠ observed behavior"
+2. **Negative Space Engine** — "Expected evidence ≠ observed evidence"
+3. **Behavioral Anomaly Engine** — "Observed behavior ≠ normal behavior"
+4. **Peer Benchmark Engine** — "Entity behavior ≠ comparable entities"
+5. **Supervisory Evidence Engine** — "Finding → rationale → evidence → sample"
+
+At the heart of these engines is the **Expected Evidence Model**: for each CSE, predict "normal" evidence based on claims + history + asset inventory, then compare actual evidence against the model. This is what makes negative-space detection possible.
 
 ### The End-to-End Flow
 
@@ -103,19 +107,20 @@ Data Ingestion & Validation
     ↓
 Normalisation & Behavioral Profile Extraction
     ↓
-Supervisory Analytics Layer (7 Layers)
-├── Layer 3a: Workflow Integrity Engine
-├── Layer 3b: Expected Evidence Model
-├── Layer 3c: Temporal Drift Detection
-├── Layer 3d: Peer Benchmarking Engine
+Expected Evidence Model (CSE-specific "what should be observed")
     ↓
-Layer 4: Signal Fusion & Supervisory Case Generation
+Supervisory Analytics Layer (5 Engines)
+├── Execution Gap Engine
+├── Negative Space Engine
+├── Behavioral Anomaly Engine
+├── Peer Benchmark Engine
+└── Supervisory Evidence Engine
     ↓
-Layer 5: Unsupervised Pattern Discovery
+Signal Fusion & Supervisory Case Generation
     ↓
-Layer 6: Prioritization & Evidence Tracing
+Prioritization & Evidence Tracing
     ↓
-Layer 7: Explainability & Rationale Generation
+Explainability & Rationale Generation
     ↓
 Finding & Evidence Engine
     ↓
@@ -127,6 +132,53 @@ Human Supervisor (final decision)
 ```
 
 SAT-SA does not make compliance determinations or supervisory conclusions. It produces **findings** — structured observations with rationale, supporting evidence, and recommended review actions. The examiner decides what each finding means and what follow-up is warranted.
+
+---
+
+## 3a. The Expected Evidence Model
+
+Negative-space detection requires a baseline: **what should this CSE be producing?**
+
+SAT-SA builds a CSE-specific **Expected Evidence Model** that predicts what evidence *should* be observed based on:
+
+- The CSE's claimed capabilities and monitoring scope
+- Its asset inventory (criticality, category, environment)
+- Historical baselines from previous submission periods
+- Peer entity behavior in comparable environments
+
+For any given situation, the model defines:
+
+```text
+Expected Evidence
+       ↓
+Observed Evidence
+       ↓
+Evidence Gap
+```
+
+**Example: Critical Alert**
+
+Expected:
+- Investigation opened within SLA
+- Analyst assigned
+- Evidence collected (logs, artifacts)
+- Escalation decision recorded
+- Closure reason documented
+- Root cause identified (if applicable)
+
+Observed:
+- Investigation opened ✓
+- Analyst assigned ✓
+- Evidence collected ✗
+- Escalation decision ✗
+- Closure reason ✓
+- Root cause identified ✗
+
+→ **Evidence Gap: Missing escalation decision, missing root cause**
+
+This model makes negative-space detection systematic rather than relying on examiners to notice absences manually.
+
+The Expected Evidence Model is what makes SAT-SA different from a generic anomaly detector. Anomaly detectors flag what is present. SAT-SA flags what is missing — and whether that absence is suspicious.
 
 ---
 
@@ -151,17 +203,53 @@ The table below describes the capabilities of SAT-SA. Items marked **Planned** a
 
 ---
 
-## 5. What SAT-SA Does NOT Do
+## 5. What SAT-SA Is — And What It Is Not
 
-SAT-SA is intentionally bounded. The following capabilities are **out of scope** and will not be added:
+SAT-SA is intentionally bounded. Understanding the boundary is essential.
 
-- **It is not a SOC.** SAT-SA does not monitor networks, generate security alerts, or respond to incidents.
-- **It is not a SIEM.** It does not correlate events in real time, run detection rules against live telemetry, or serve as an operational security platform.
-- **It does not perform real-time monitoring.** It analyses periodic data submissions on a supervisory cycle, not live traffic.
-- **It is not a centralised SOC.** It does not aggregate operational control of multiple CSEs.
-- **It does not continuously collect logs or telemetry.** It works with periodic, supervisor-approved submissions.
-- **It is not a national cyber monitoring platform.** It operates within NCIIPC's supervisory remit over CSEs only.
-- **It does not replace supervisory judgement.** Findings are inputs to human decision-making, not conclusions.
+### SAT-SA Is NOT a SOC
+
+A SOC performs real-time monitoring, alert detection, incident response, threat hunting, containment, blocking, and log monitoring.
+
+SAT-SA does none of these.
+
+### SAT-SA Is NOT a SIEM
+
+A SIEM ingests millions of raw logs and continuously correlates them to detect attacks.
+
+SAT-SA does not do this. It does not ingest raw packet captures. It does not run live detection rules. It does not generate security alerts.
+
+### SAT-SA Is NOT a National Monitoring System
+
+NCIIPC is not asking: "Give us live visibility into every CSE."
+
+No. NCIIPC already has SOCs. They want a **supervisory intelligence layer** that looks at evidence produced by SOCs and tells examiners where the SOC may have weaknesses.
+
+### SAT-SA IS Supervisory Analytics
+
+SAT-SA asks:
+
+> **"Based on the operational evidence submitted by this CSE, does its security operation appear effective?"**
+
+It transforms SOC data into **signals → evidence → priorities → human supervisory decisions**.
+
+| Role | Core Question |
+|------|--------------|
+| SOC / SIEM | "Is there a cyber attack?" |
+| **SAT-SA** | "**Is the SOC operating effectively, and where should a supervisor look next?**" |
+
+### Out-of-Scope Capabilities
+
+The following are explicitly **out of scope** and will not be added:
+
+- Real-time SOC monitoring or alerting
+- SIEM correlation or live event processing
+- Network packet capture or analysis
+- Customer data or PII processing
+- Cloud deployment or SaaS features
+- External API integrations
+- Generic chatbot or LLM wrapper
+- Compliance scoring or certification
 
 This boundary is directly aligned with SIH26157 and preserves the role of human examiners as the ultimate authority.
 
@@ -176,16 +264,18 @@ flowchart TD
     A[CSE Submissions<br/>CSV / JSON / DB Export] --> B[Ingestion & Validation]
     B --> C[Normalisation Layer]
     C --> D[Behavioral Profile Extraction]
-    D --> E[Supervisory Analytics Engine]
-    E --> F1[Workflow Integrity Engine]
-    E --> F2[Expected Evidence Model]
-    E --> F3[Temporal Drift Detection]
-    E --> F4[Peer Benchmarking Engine]
-    F1 --> G[Signal Fusion & Case Generation]
-    F2 --> G
-    F3 --> G
-    F4 --> G
-    G --> H[Unsupervised Pattern Discovery]
+    D --> E[Expected Evidence Model]
+    E --> F[Supervisory Analytics Engine]
+    F --> G1[Execution Gap Engine]
+    F --> G2[Negative Space Engine]
+    F --> G3[Behavioral Anomaly Engine]
+    F --> G4[Peer Benchmark Engine]
+    F --> G5[Supervisory Evidence Engine]
+    G1 --> H[Signal Fusion & Case Generation]
+    G2 --> H
+    G3 --> H
+    G4 --> H
+    G5 --> H
     H --> I[Prioritisation & Evidence Tracing]
     I --> J[Explainability & Rationale Generation]
     J --> K[Dashboard & Reports]
@@ -204,7 +294,20 @@ flowchart TD
 
 ## 7. Supervisory Analytics Engine
 
-The analytics engine is the technical core of SAT-SA. It is organised into **8 detection modules** across **7 layers**.
+The analytics engine is the technical core of SAT-SA. It is organised into **8 detection modules** across **5 engines**, mapped to the **8 supervisory capability areas**.
+
+### Capability Area → Signal Group Mapping
+
+| Capability Area | Signal Groups |
+|----------------|---------------|
+| Threat Detection | Alert volume gaps, missing alert categories, alert source distribution |
+| Investigation | Execution gap (superficial closures), investigation quality heuristics, evidence artifact absence |
+| Escalation | Execution gap (escalation without action), escalation absence, escalation pattern anomalies |
+| Incident Response | Repetition patterns, recurring incidents, root-cause absence, case reopenings |
+| Security Operations | Workload distribution, queue accumulation, analyst concentration |
+| Governance & Oversight | KPI-reality divergence, workflow integrity, exception documentation |
+| Operational Discipline | Temporal implausibility, missing fields, workflow breaks, premature closures |
+| Cyber Resilience | Temporal drift, cyclical anomalies, recurring failures, blind-spot persistence |
 
 ### 7.1 Evidence Chain Integrity Engine
 
@@ -284,7 +387,46 @@ Compares reported metrics (SLA compliance, closure rates, escalation counts) aga
 
 **Detection Approach:** Build a correlation matrix between reported KPIs and operational quality indicators. If SLA compliance improves but investigation depth declines → potential gaming.
 
-### 7.6 Peer Benchmarking with Smart Grouping
+### 7.6 Metric Gaming Detection
+
+This is one of the most important supervisory signals SAT-SA can detect. When a SOC is measured by specific KPIs, analysts may optimize for the metric rather than for actual security effectiveness.
+
+**The Pattern:**
+
+```text
+KPI Target Introduced
+       ↓
+Before: Median investigation = 42 min
+After:  Median investigation = 4 min
+
+But:
+
+Investigation evidence ↓
+Root-cause documentation ↓
+Escalation ↓
+Reopened cases ↑
+```
+
+The organization is technically meeting the KPI. But operational effectiveness is getting worse.
+
+**Detection Signals:**
+
+| Reported Metric | Operational Signal | Interpretation |
+|----------------|-------------------|----------------|
+| Alert Response SLA: 99% ✓ | Investigation depth ↓ | SLA gaming |
+| Closure Rate: 95% ✓ | Evidence quality ↓ | Superficial closures |
+| Mean Closure Time: 6h ✓ | Investigation completeness ↓ | Speed over thoroughness |
+| Escalation Count: +20% ✓ | Post-escalation follow-up ↓ | Escalation without action |
+
+**Detection Approach:**
+- Track metric trends alongside operational quality trends
+- Flag divergence: metric improves while quality degrades
+- Correlate with workload, staffing, and process changes
+- Identify "suspiciously perfect" KPI compliance (e.g., every critical alert closed in exactly 4 minutes)
+
+SAT-SA asks: **"Is the SOC optimizing for measurement, or for security?"**
+
+### 7.7 Peer Benchmarking with Smart Grouping
 
 Contextualises entity metrics against comparable CSEs with normalization to avoid misleading comparisons.
 
@@ -305,7 +447,7 @@ Contextualises entity metrics against comparable CSEs with normalization to avoi
 - **Unexplained similarity:** Multiple CSEs exhibit nearly identical suspicious behavior → possible shared weakness
 - **Healthy outlier:** Deviates from peers but for defensible reasons
 
-### 7.7 Cyclical & Temporal Anomalies
+### 7.8 Cyclical & Temporal Anomalies
 
 Detects patterns in SOC operations that deviate from expected temporal behavior.
 
@@ -317,7 +459,7 @@ Detects patterns in SOC operations that deviate from expected temporal behavior.
 5. Shift-based quality variance: Investigations by night shift much shallower than day shift
 6. Staffing-correlated gaps: Alerts increase when staff on leave; investigations decrease
 
-### 7.8 Supervisory Attention Score
+### 7.9 Supervisory Attention Score
 
 The Supervisory Attention Score aggregates detected signals into an entity-level indicator that helps prioritise manual review.
 
@@ -422,6 +564,237 @@ Prioritise investigation and staffing records for CSE-042 for manual review. Exa
 ---
 
 This finding does not conclude that CSE-042 is non-compliant. It states that **potential supervisory concern exists and human examination is warranted.**
+
+---
+
+## 9a. The Supervisory Finding Card
+
+Every SAT-SA finding is presented as a **Finding Card** — a structured, human-readable summary designed for NCIIPC examiners.
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 Potential Execution Gap
+
+CSE:            CSE-014
+Domain:         Investigation
+Priority:       HIGH
+Confidence:     93%
+
+Signal
+Critical alerts are frequently closed
+without sufficient investigation evidence.
+
+Evidence
+• 1,238 critical alerts
+• 61% closed < 5 minutes
+• Peer median = 14 minutes
+• 74% use identical investigation sequence
+• Root-cause evidence missing in 68%
+
+Affected Cases
+237
+
+Recommended Action
+Review 20 high-information cases.
+
+[VIEW EVIDENCE]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Every Finding Card includes:**
+
+| Field | Purpose |
+|-------|---------|
+| Finding Type | Execution Gap, Negative Space, Anomaly, Peer Deviation |
+| CSE & Domain | Which entity and capability area |
+| Priority | HIGH / MEDIUM / LOW |
+| Confidence | How strong the signal is |
+| Signal Description | What was detected |
+| Evidence Summary | Quantitative backing |
+| Affected Cases | How many records contributed |
+| Recommended Action | What examiner should do next |
+| Caveats | Alternative explanations |
+
+The Finding Card is the primary output of SAT-SA. It is designed to be read in under 30 seconds and to trace directly to deeper evidence.
+
+---
+
+## 9b. The Evidence Graph
+
+Every finding traces back to source records through an **Evidence Graph** — a traceable chain linking findings to the raw submitted data.
+
+```
+Finding
+   ↓
+Signal
+   ↓
+Metric
+   ↓
+Cases
+   ↓
+Alerts
+   ↓
+Submitted dataset
+```
+
+**Example trace:**
+
+```
+Finding: Potential Escalation Gap
+
+      ↓
+
+Signal: Critical alerts have unusually low escalation
+
+      ↓
+
+Metric: Escalation rate = 1.4%
+
+      ↓
+
+Evidence: 37 critical cases
+
+      ↓
+
+Alert IDs:
+AL-234
+AL-291
+AL-301
+...
+```
+
+The Evidence Graph makes SAT-SA fully auditable. An examiner (or auditor) can reconstruct:
+
+```text
+Dataset version
+        ↓
+Analytics version
+        ↓
+Rules/models used
+        ↓
+Features calculated
+        ↓
+Finding generated
+        ↓
+Score calculated
+```
+
+This traceability is essential for supervisory decisions.
+
+---
+
+## 9c. Eight Capability Areas
+
+SAT-SA's analytics are organized around **eight capability areas** that map directly to NCIIPC's supervisory assessment framework.
+
+### 1. Threat Detection
+
+Questions:
+- Are expected alert types appearing?
+- Are critical assets generating telemetry?
+- Are detection patterns unusual?
+- Are some categories absent?
+
+### 2. Investigation
+
+Questions:
+- Are alerts actually investigated?
+- How long do investigations take?
+- Is evidence recorded?
+- Are investigation steps meaningful?
+- Are investigation patterns repetitive?
+
+### 3. Escalation
+
+Questions:
+- Are critical alerts escalated?
+- Are escalation times reasonable?
+- Are escalation patterns consistent?
+- Are important alerts being closed without escalation?
+
+### 4. Incident Response
+
+Questions:
+- Are incidents repeatedly recurring?
+- Is remediation happening?
+- Are root causes identified?
+- Are cases reopened?
+
+### 5. Security Operations
+
+Questions:
+- Are workloads plausible?
+- Are analyst workloads unusual?
+- Are alerts distributed strangely?
+- Are queues accumulating?
+
+### 6. Governance & Oversight
+
+Questions:
+- Are processes being followed?
+- Are records complete?
+- Are exceptions documented?
+- Are management controls reflected in actual operations?
+
+### 7. Operational Discipline
+
+Questions:
+- Are mandatory fields populated?
+- Are timestamps sensible?
+- Are workflows followed?
+- Are cases being prematurely closed?
+
+### 8. Cyber Resilience
+
+Questions:
+- Do problems keep recurring?
+- Are root causes fixed?
+- Are blind spots persistent?
+- Does operational effectiveness deteriorate over time?
+
+Each capability area feeds into the five supervisory analytics engines. The eight areas provide the supervisory vocabulary; the five engines provide the analytical mechanism.
+
+---
+
+## 9d. Anomaly Detection for Unknown Indicators
+
+The problem statement explicitly requires:
+
+> "The tool should help supervisors identify both known and previously unknown indicators."
+
+SAT-SA therefore goes beyond predefined rules. While deterministic rules catch known patterns, unsupervised and statistical techniques discover previously unknown indicators.
+
+### Techniques Used
+
+| Technique | Purpose | Example |
+|-----------|---------|---------|
+| **Isolation Forest** | Multivariate outlier detection | Entity with unusual combination of metrics |
+| **Clustering** | Group similar entities/patterns | Discover hidden peer groups or operational archetypes |
+| **Change-point detection** | Detect sudden behavioral shifts | SOC behavior changed in Q3 but no rule caught it |
+| **Statistical deviation** | Identify significant peer differences | Entity at 99th percentile for some metric |
+| **Sequence analysis** | Detect repetitive workflows | Same investigation sequence repeated 200 times |
+| **Graph analytics** | Discover entity relationships | Asset-alert-case escalation patterns |
+
+### How Unknown Indicators Surface
+
+```text
+Entity A: Critical alerts → 7%
+Entity B: Critical alerts → 8%
+Entity C: Critical alerts → 0.02%
+```
+
+Entity C deviates significantly. The deterministic rules might not flag it (0.02% is not "zero"). But anomaly detection surfaces it as a potential supervisory concern.
+
+### The Safety Guardrail
+
+Anomaly detection is **augmentation, not replacement** for deterministic rules:
+
+1. **Anomaly detection** surfaces candidates
+2. **Deterministic rules** validate candidates against known patterns
+3. **Signal fusion** combines both into supervisory cases
+4. **Examiners** make the final judgment
+
+No finding is based solely on an anomaly score. Every anomaly finding must be explainable and traceable.
 
 ---
 
@@ -935,7 +1308,7 @@ Unlike a SIEM or dashboard, SAT-SA asks a different question: 'Is the SOC actual
 ### [0:05-0:15] Data Ingestion
 "We load quarterly submissions from 50 CSEs — their alerts, investigations, escalations, and asset inventory.
 
-SAT-SA normalizes heterogeneous data into a unified analytical schema, then applies supervisory analytics across seven layers: workflow integrity, expected-evidence validation, temporal drift detection, peer benchmarking, signal fusion, unsupervised pattern discovery, and explainability."
+SAT-SA normalizes heterogeneous data into a unified analytical schema, then applies supervisory analytics across five engines: execution gap detection, negative space detection, behavioral anomaly detection, peer benchmarking, and supervisory evidence generation."
 
 ### [0:15-0:30] Portfolio Overview
 "Here's the portfolio view. 50 entities analyzed. 8 with supervisory findings requiring attention. Ranked by priority.
