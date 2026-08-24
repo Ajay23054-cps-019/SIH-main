@@ -136,11 +136,6 @@ def compute_metrics(test_cases: List[Dict[str, Any]],
     }
 
 
-def fp_rate_per_clean_cse(value: float) -> float:
-    """(identity hook kept out — value passed straight through)."""
-    return value
-
-
 def _count(items, key) -> Dict[str, int]:
     out: Dict[str, int] = defaultdict(int)
     for item in items:
@@ -278,8 +273,9 @@ def run_validation(dataset_dir: Path = DEFAULT_DATASET,
     try:
         run_pipeline(db_path, dataset_dir)
         findings = load_findings_as_objects(db_path)
-        scores = load_scores(db_path)
-        priorities = {s.cse_id: s.priority for s in scores}
+        scores = load_scores(db_path)          # DataFrame from the store
+        priorities = (dict(zip(scores["cse_id"], scores["priority"]))
+                      if len(scores) else {})
         metadata_rows = _count_metadata_cses(dataset_dir)
         metrics = compute_metrics(TEST_CASES, findings, priorities,
                                   n_cses_total=metadata_rows)
