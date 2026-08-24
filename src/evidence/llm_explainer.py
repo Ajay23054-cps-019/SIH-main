@@ -328,10 +328,7 @@ def main(argv=None) -> int:
         print(f"No findings for {args.cse_id} in {args.db}")
         return 1
     pairs = [(f, tracer.trace(f.finding_id)) for f in findings]
-    try:
-        score_line = attention_score_line(args.db, args.cse_id)
-    except Exception:
-        score_line = "Supervisory Attention Priority: (unavailable)"
+    score_line = attention_score_line(args.db, args.cse_id)
     narrative, reason = None, ""
     try:
         narrative = explain_portfolio(score_line, pairs, config=config)
@@ -345,14 +342,18 @@ def main(argv=None) -> int:
 
 
 def attention_score_line(db_path: Path, cse_id: str) -> str:
+    """Stored priority line; graceful when scoring hasn't run yet."""
     import pandas as pd
     from sqlalchemy import text
 
     from src.storage.db import get_engine
 
-    rows = pd.read_sql(text(
-        "SELECT priority FROM attention_scores WHERE cse_id = :cid"),
-        get_engine(db_path), params={"cid": cse_id})
+    try:
+        rows = pd.read_sql(text(
+            "SELECT priority FROM attention_scores WHERE cse_id = :cid"),
+            get_engine(db_path), params={"cid": cse_id})
+    except Exception:
+        return "Supervisory Attention Priority: (run scoring to populate)"
     priority = float(rows["priority"].iloc[0]) if len(rows) else 0.0
     return f"Supervisory Attention Priority: {priority:.1f} of 100"
 
