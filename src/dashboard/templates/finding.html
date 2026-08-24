@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ finding_id }} &middot; SAT-SA{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="/dashboard/">&larr; Portfolio</a></p>
+
+<header id="finding-header" class="panel">
+  <h1 id="finding-title">{{ finding_id }}</h1>
+  <p>
+    <span id="finding-severity" class="badge"></span>
+    <span class="muted">confidence:</span>
+    <span id="finding-confidence">&ndash;</span>
+    <span class="muted">category:</span>
+    <span id="finding-category">&ndash;</span>
+    <span class="muted">period:</span>
+    <span id="finding-period">&ndash;</span>
+  </p>
+</header>
+
+<section class="panel">
+  <h2>Rationale</h2>
+  <p id="rationale" class="loading">Loading&hellip;</p>
+  <ul id="caveats" class="caveats"></ul>
+</section>
+
+<section class="panel">
+  <h2>Evidence Chain <span class="muted">(Finding &rarr; Signal &rarr;
+      Metric &rarr; Records)</span></h2>
+  <div id="chain-metrics"></div>
+  <table class="evidence-table" id="evidence-table">
+    <thead>
+      <tr><th>Record</th><th>Type</th><th>Key fields</th><th>Relevance</th></tr>
+    </thead>
+    <tbody id="evidence-body"><tr><td colspan="4"
+        class="loading">Loading&hellip;</td></tr></tbody>
+  </table>
+  <div id="missing-records"></div>
+</section>
+
+<section class="panel" id="peer-context-panel" hidden>
+  <h2>Peer Context</h2>
+  <div id="peer-context"></div>
+</section>
+
+<section class="panel">
+  <h2>Recommended Examiner Actions</h2>
+  <ul id="actions-list"><li class="loading">Loading&hellip;</li></ul>
+</section>
+{% endblock %}

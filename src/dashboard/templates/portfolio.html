@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Portfolio &middot; SAT-SA{% endblock %}
+
+{% block content %}
+<h1>SAT-SA Portfolio Overview</h1>
+
+<div class="summary-cards">
+  <div class="card">
+    <div class="card-label">Total CSEs</div>
+    <div class="card-value" id="total-cses">&ndash;</div>
+  </div>
+  <div class="card">
+    <div class="card-label">High-Priority Findings</div>
+    <div class="card-value" id="high-priority">&ndash;</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Critical Signals</div>
+    <div class="card-value" id="critical-signals">&ndash;</div>
+  </div>
+</div>
+
+<section class="panel">
+  <h2>Ranked by Supervisory Attention Priority</h2>
+  <p class="muted">Click a row to open the entity deep-dive. Priority orders
+  this review cycle only.</p>
+  <table id="rankings-table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>CSE ID</th>
+        <th>Sector</th>
+        <th>Attention Priority</th>
+        <th>Findings</th>
+        <th>Top Signal</th>
+      </tr>
+    </thead>
+    <tbody id="rankings-body">
+      <tr><td colspan="6" class="loading">Loading&hellip;</td></tr>
+    </tbody>
+  </table>
+</section>
+{% endblock %}

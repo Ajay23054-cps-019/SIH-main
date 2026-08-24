@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SAT-SA{% endblock %}</title>
+  <link rel="stylesheet" href="/dashboard/static/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/dashboard/">SAT&#8209;SA</a>
+    <span class="brand-sub">Supervisory Analytics Tool for SOC Assessment</span>
+    <nav>
+      <a href="/dashboard/">Portfolio</a>
+      <a href="/docs">API</a>
+    </nav>
+  </header>
+
+  {% block disclaimer %}
+  <div class="disclaimer-banner" role="note">
+    Potential supervisory concerns only &mdash; not determinations of
+    non-compliance. Attention Priority is a review-ordering heuristic,
+    not a risk or compliance score.
+  </div>
+  {% endblock %}
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span id="data-freshness"></span>
+    <span>SAT-SA &middot; offline-capable &middot; no data leaves this machine</span>
+  </footer>
+
+  {# Chart.js is bundled locally — the dashboard must work without internet #}
+  <script src="/dashboard/static/js/lib/chart.umd.min.js"></script>
+  <script src="/dashboard/static/js/app.js"></script>
+</body>
+</html>

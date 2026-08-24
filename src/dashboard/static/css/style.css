@@ -1,0 +1,237 @@
+/* SAT-SA dashboard — plain CSS, no framework, no build step.
+   Layout: flex topbar + CSS Grid cards + responsive tables.
+   Severity coding: red HIGH / yellow MEDIUM / green LOW. */
+
+:root {
+  --ink: #1c2430;
+  --muted: #5b6774;
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --line: #d7dde3;
+  --accent: #14532d;
+  --high: #b91c1c;
+  --high-bg: #fee2e2;
+  --medium: #92400e;
+  --medium-bg: #fef3c7;
+  --low: #166534;
+  --low-bg: #dcfce7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.45;
+}
+
+/* ---- Topbar / chrome ------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  color: #fff;
+}
+.topbar .brand {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.topbar .brand-sub { font-size: 0.85rem; opacity: 0.85; }
+.topbar nav { margin-left: auto; display: flex; gap: 1rem; }
+.topbar nav a { color: #fff; text-decoration: none; }
+.topbar nav a:hover { text-decoration: underline; }
+
+.disclaimer-banner {
+  padding: 0.45rem 1.25rem;
+  background: var(--medium-bg);
+  color: var(--medium);
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.container { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 1.5rem auto;
+  padding: 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+h1 { font-size: 1.5rem; margin: 0.25rem 0 0.75rem; }
+h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
+.breadcrumb a { color: var(--accent); text-decoration: none; }
+.muted { color: var(--muted); font-weight: 400; }
+.loading { color: var(--muted); font-style: italic; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ---- Summary cards (flex, wraps on small screens) --------------------- */
+
+.summary-cards {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.card {
+  flex: 1 1 180px;
+  min-width: 150px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.card-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.card-value { font-size: 1.7rem; font-weight: 700; margin-top: 0.15rem; }
+
+/* ---- Tables ------------------------------------------------------------ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 0.92rem;
+}
+th {
+  background: #eef1f4;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+tbody tr:hover { background: #f7fafc; cursor: pointer; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.priority-bar {
+  display: inline-block;
+  height: 0.55rem;
+  min-width: 2px;
+  background: var(--accent);
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+/* ---- Severity badges (red/yellow/green) -------------------------------- */
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.badge.high   { background: var(--high-bg);   color: var(--high); }
+.badge.medium { background: var(--medium-bg); color: var(--medium); }
+.badge.low    { background: var(--low-bg);    color: var(--low); }
+
+/* ---- Findings list / evidence chain ------------------------------------ */
+
+.findings-list { list-style: none; margin: 0; padding: 0; }
+.findings-list li {
+  padding: 0.6rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.findings-list li:last-child { border-bottom: none; }
+.findings-list a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.findings-list a:hover { text-decoration: underline; }
+.finding-meta { color: var(--muted); font-size: 0.85rem; }
+
+.caveats { color: var(--medium); font-size: 0.85rem; }
+
+.chain-step { margin-bottom: 0.5rem; }
+.chain-step .step-tag {
+  display: inline-block;
+  min-width: 5.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.evidence-table td code { font-size: 0.85rem; }
+.record-detail {
+  background: #f7fafc;
+  border-left: 3px solid var(--line);
+}
+.record-detail pre {
+  margin: 0.35rem 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+}
+tr.expandable { cursor: pointer; }
+.missing-note { color: var(--high); font-size: 0.85rem; margin-top: 0.5rem; }
+
+.peer-bars { display: flex; align-items: flex-end; gap: 0.4rem; height: 220px; margin-top: 0.75rem; }
+.peer-bars .pbar-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  min-width: 26px;
+}
+.peer-bars .pbar {
+  width: 100%;
+  background: #93c5ae;
+  border-radius: 3px 3px 0 0;
+}
+.peer-bars .pbar.self { background: var(--accent); }
+.peer-bars .pbar-col .pbar-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  margin-top: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 100px;
+}
+.peer-bars .pbar-col.self .pbar-label { font-weight: 700; color: var(--ink); }
+
+ul#actions-list, ul#caveats { margin: 0.25rem 0; padding-left: 1.2rem; }
+ul#actions-list li, ul#caveats li { margin-bottom: 0.3rem; }
+
+/* ---- Responsive: tablet & phone ---------------------------------------- */
+
+@media (max-width: 800px) {
+  .container { padding: 0.75rem; }
+  h1 { font-size: 1.25rem; }
+  /* Let wide tables scroll horizontally instead of squashing */
+  .panel { overflow-x: auto; }
+  table { min-width: 560px; }
+  .topbar { align-items: center; }
+  .topbar .brand-sub { display: none; }
+}
+
+@media (max-width: 480px) {
+  .summary-cards { flex-direction: column; }
+  .card { min-width: 0; }
+}

@@ -1,0 +1,415 @@
+/* SAT-SA dashboard logic — vanilla JS, no build step.
+ *
+ * Pages are thin Jinja2 shells; everything below renders client-side by
+ * fetching the same REST API an auditor would call, so the dashboard can
+ * never display a number that did not come through the documented API.
+ *
+ * Chart.js is bundled locally (offline requirement); every chart has a
+ * pure-CSS fallback when window.Chart is unavailable.
+ */
+"use strict";
+
+// ---------------------------------------------------------------- helpers
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function fetchJSON(url) {
+  const resp = await fetch(url);
+  let body = null;
+  try { body = await resp.json(); } catch (err) { /* non-JSON */ }
+  if (!resp.ok) {
+    const detail = body && body.errors && body.errors[0]
+      ? body.errors[0].detail : resp.status + " " + resp.statusText;
+    throw new Error(detail);
+  }
+  if (body && body.meta && body.meta.generated_at) {
+    const el = document.getElementById("data-freshness");
+    if (el) el.textContent = "API data generated at " +
+      new Date(body.meta.generated_at).toLocaleString();
+  }
+  return body;
+}
+
+function sevClass(severity) {
+  return "badge " + String(severity || "").toLowerCase();
+}
+function sevBadge(severity) {
+  if (!severity) return "";
+  return '<span class="' + sevClass(severity) + '">' +
+    escapeHtml(severity) + "</span>";
+}
+
+function fmtNumber(v) {
+  if (v === null || v === undefined || Number.isNaN(Number(v))) return "–";
+  const n = Number(v);
+  if (Math.abs(n) >= 1000) return n.toLocaleString(undefined,
+    { maximumFractionDigits: 1 });
+  if (Math.abs(n) >= 10) return n.toFixed(1);
+  return n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function setError(el, message) {
+  el.innerHTML = '<span class="missing-note">Could not load data: ' +
+    escapeHtml(message) + "</span>";
+}
+
+// ------------------------------------------------------- page dispatching
+
+document.addEventListener("DOMContentLoaded", function () {
+  const path = window.location.pathname;
+  if (/^\/dashboard\/?$/.test(path)) initPortfolio();
+  else if (/^\/dashboard\/entity\/.+/.test(path)) {
+    initEntity(decodeURIComponent(path.split("/")[3]));
+  } else if (/^\/dashboard\/finding\/.+/.test(path)) {
+    initFinding(decodeURIComponent(path.replace(/^\/dashboard\/finding\//, "")));
+  }
+});
+
+// ------------------------------------------------------------- portfolio
+
+function initPortfolio() {
+  renderSummary();
+  renderRankings();
+}
+
+async function renderSummary() {
+  const elHigh = document.getElementById("high-priority");
+  const elCrit = document.getElementById("critical-signals");
+  try {
+    const body = await fetchJSON("/api/portfolio/summary");
+    const d = body.data;
+    // Total CSEs is filled by renderRankings (it knows the full list).
+    const high = d.findings_by_severity && d.findings_by_severity.HIGH || 0;
+    elHigh.textContent = high;
+    const critTypes = await fetchJSON("/api/findings?severity=HIGH");
+    elCrit.textContent = new Set(
+      critTypes.data.map(function (f) { return f.signal_type; })).size;
+  } catch (err) {
+    elHigh.textContent = "!"; elCrit.textContent = "!";
+    console.error(err);
+  }
+}
+
+async function renderRankings() {
+  const tbody = document.getElementById("rankings-body");
+  try {
+    const body = await fetchJSON("/api/portfolio/rankings");
+    const rows = body.data;
+    const elTotal = document.getElementById("total-cses");
+    if (elTotal) elTotal.textContent = rows.length;
+
+    const maxP = Math.max.apply(null, rows.map(function (r) {
+      return r.priority; }).concat([0])) || 1;
+
+    tbody.innerHTML = rows.map(function (r, i) {
+      const sector = r.sector || "–";
+      const sizeBand = r.size_band ? " · " + escapeHtml(r.size_band) : "";
+      const barW = Math.max(2, Math.round(100 * r.priority / maxP));
+      const signal = r.top_signal
+        ? sevBadge(r.top_signal_severity) + " <code>" +
+          escapeHtml(r.top_signal) + "</code>"
+        : '<span class="muted">none</span>';
+      return '<tr tabindex="0" data-cse="' + escapeHtml(r.cse_id) + '">' +
+        "<td>" + (i + 1) + "</td>" +
+        "<td><strong>" + escapeHtml(r.cse_id) + "</strong></td>" +
+        "<td>" + sector + sizeBand + "</td>" +
+        '<td class="num"><span class="priority-bar" style="width:' +
+          barW + 'px"></span>' + r.priority.toFixed(1) + "</td>" +
+        '<td class="num">' + r.n_findings + "</td>" +
+        "<td>" + signal + "</td></tr>";
+    }).join("");
+
+    tbody.addEventListener("click", function (ev) {
+      const tr = ev.target.closest("tr[data-cse]");
+      if (tr) window.location.href =
+        "/dashboard/entity/" + encodeURIComponent(tr.dataset.cse);
+    });
+    tbody.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Enter") return;
+      const tr = ev.target.closest("tr[data-cse]");
+      if (tr) window.location.href =
+        "/dashboard/entity/" + encodeURIComponent(tr.dataset.cse);
+    });
+  } catch (err) {
+    setError(tbody, err.message);
+  }
+}
+
+// ---------------------------------------------------------------- entity
+
+function initEntity(cseId) {
+  document.getElementById("entity-title").textContent = cseId;
+  loadProfile(cseId);
+  loadFindings(cseId);
+  loadPeers(cseId);
+}
+
+async function loadProfile(cseId) {
+  const attrsEl = document.getElementById("entity-attrs");
+  try {
+    const body = await fetchJSON("/api/profiles/" + encodeURIComponent(cseId));
+    const prof = body.data.filter(function (p) { return p.period === "ALL"; })
+      .concat(body.data)[0];
+    if (!prof) throw new Error("no ALL-period profile stored");
+
+    ["alert_volume_total", "inv_depth_mean", "closure_velocity_median_h",
+      "esc_rate"].forEach(function (key) {
+      const cell = document.getElementById("m-" + key);
+      if (cell) cell.textContent = fmtNumber(prof.metrics[key]);
+    });
+  } catch (err) {
+    document.querySelectorAll(".card-value[id^='m-']").forEach(function (el) {
+      el.textContent = "!";
+    });
+    console.error(err);
+  }
+
+  // Sector/size context straight from the metadata table via ingest status
+  // is not exposed per-CSE; the peers endpoint carries it instead.
+  try {
+    const bench = await fetchJSON("/api/peers/" + encodeURIComponent(cseId));
+    const d = bench.data;
+    attrsEl.innerHTML = escapeHtml(d.sector || "Unknown sector") +
+      " &middot; " + escapeHtml(d.size_band || "Unknown size band") +
+      " &middot; peer group: <strong>" + escapeHtml(d.group_label) +
+      "</strong> (" + d.peer_ids.length + " peers)";
+  } catch (err) { /* peer load reports its own errors */ }
+}
+
+function actionsHtml(finding) {
+  const acts = finding.recommended_actions || [];
+  if (!acts.length) return "";
+  return "<ul>" + acts.map(function (a) {
+    return "<li>" + escapeHtml(a) + "</li>"; }).join("") + "</ul>";
+}
+
+async function loadFindings(cseId) {
+  const list = document.getElementById("findings-list");
+  try {
+    const body = await fetchJSON("/api/findings?cse_id=" +
+      encodeURIComponent(cseId));
+    const rows = body.data;
+    if (!rows.length) {
+      list.innerHTML = '<li class="muted">No signals fired for this CSE in ' +
+        "the current run.</li>";
+      return;
+    }
+    list.innerHTML = rows.map(function (f) {
+      return "<li>" + sevBadge(f.severity) + " <code>" +
+        escapeHtml(f.signal_type) + "</code> " +
+        '<span class="finding-meta">confidence ' + fmtNumber(f.confidence) +
+        " &middot; period " + escapeHtml(f.period) + "</span><br>" +
+        '<a href="/dashboard/finding/' + encodeURIComponent(f.finding_id) +
+        '">Open evidence chain &rarr;</a>' +
+        (f.recommended_actions && f.recommended_actions.length
+          ? actionsHtml(f) : "") + "</li>";
+    }).join("");
+  } catch (err) {
+    setError(list, err.message);
+  }
+}
+
+const PEER_CHART_METRIC = "inv_depth_mean";
+
+async function loadPeers(cseId) {
+  const note = document.getElementById("peer-group-note");
+  const bars = document.getElementById("peer-bars");
+  const canvas = document.getElementById("peer-chart");
+  try {
+    const body = await fetchJSON("/api/peers/" + encodeURIComponent(cseId));
+    const d = body.data;
+    if (!d.benchmarks.length) {
+      note.textContent = d.skipped && d.skipped.__all__
+        ? d.skipped.__all__ : "No comparable-metric benchmarks stored.";
+      canvas.hidden = true;
+      return;
+    }
+    const bm = d.benchmarks.filter(function (b) {
+      return b.metric === PEER_CHART_METRIC; })[0] || d.benchmarks[0];
+    note.textContent = bm.metric + " vs peer mean (" + fmtNumber(bm.peer_mean) +
+      ") over " + bm.n_peers + " peers — z " + fmtNumber(bm.z_score) +
+      ", percentile " + fmtNumber(bm.percentile) + "." +
+      (bm.note ? " Note: " + bm.note : "");
+
+    // Peer member values are not stored individually — plot the CSE against
+    // the distribution stats we do hold (self / peer mean / peer median).
+    const labels = ["This CSE", "Peer median", "Peer mean"];
+    const values = [bm.value, bm.peer_median, bm.peer_mean];
+
+    if (window.Chart) {           // bundled Chart.js — offline-safe
+      bars.hidden = true;
+      canvas.hidden = false;
+      new Chart(canvas, {
+        type: "bar",
+        data: { labels: labels, datasets: [{
+          label: bm.metric, data: values,
+          backgroundColor: ["#14532d", "#93c5ae", "#93c5ae"],
+        }] },
+        options: {
+          responsive: true, animation: false,
+          plugins: { legend: { display: false },
+            title: { display: true, text: bm.metric } },
+          scales: { y: { beginAtZero: true } },
+        },
+      });
+    } else {                      // pure-CSS fallback, no JS chart lib
+      canvas.hidden = true;
+      const maxV = Math.max.apply(null, values.concat([1]));
+      bars.innerHTML = labels.map(function (label, i) {
+        const h = Math.max(2, Math.round(200 * values[i] / maxV));
+        return '<div class="pbar-col' + (i === 0 ? " self" : "") + '">' +
+          '<div class="pbar' + (i === 0 ? " self" : "") +
+          '" style="height:' + h + 'px"></div>' +
+          '<div class="pbar-label">' + escapeHtml(label) + ": " +
+          fmtNumber(values[i]) + "</div></div>";
+      }).join("");
+    }
+  } catch (err) {
+    note.textContent = "Peer comparison unavailable.";
+    canvas.hidden = true;
+    setError(bars, err.message);
+  }
+}
+
+// ---------------------------------------------------------------- finding
+
+function initFinding(findingId) {
+  loadFinding(findingId);
+}
+
+function detailRow(record) {
+  const json = JSON.stringify(record.key_fields, null, 2) || "{}";
+  return '<tr class="record-detail" hidden><td colspan="4"><pre>' +
+    escapeHtml(json) + "</pre></td></tr>";
+}
+
+async function loadFinding(findingId) {
+  const title = document.getElementById("finding-title");
+  try {
+    const body = await fetchJSON("/api/findings/" +
+      encodeURIComponent(findingId) + "/explain");
+    const f = body.data.finding;
+    const chain = body.data.chain;
+
+    title.textContent = f.signal_type;
+    document.title = f.signal_type + " · SAT-SA";
+    const sevEl = document.getElementById("finding-severity");
+    sevEl.className = sevClass(f.severity);
+    sevEl.textContent = f.severity;
+    document.getElementById("finding-confidence").textContent =
+      fmtNumber(f.confidence);
+    document.getElementById("finding-category").textContent =
+      f.signal_category;
+    document.getElementById("finding-period").textContent = f.period;
+    document.querySelector(".breadcrumb").innerHTML =
+      '<a href="/dashboard/entity/' + encodeURIComponent(f.cse_id) +
+      '">&larr; ' + escapeHtml(f.cse_id) + "</a>";
+
+    // Rationale = detection logic + standard caveat(s)
+    const rationale = document.getElementById("rationale");
+    rationale.classList.remove("loading");
+    rationale.textContent = f.detection_logic ||
+      "(detection logic not recorded)";
+    document.getElementById("caveats").innerHTML =
+      (f.caveats || []).map(function (c) {
+        return "<li>" + escapeHtml(c) + "</li>"; }).join("");
+
+    // Chain metrics (Signal → Metric level of the trace)
+    if (chain) {
+      document.getElementById("chain-metrics").innerHTML =
+        chain.metrics.map(function (m) {
+          return '<div class="chain-step"><span class="step-tag">' +
+            escapeHtml(m.metric_name) + "</span><code>" +
+            escapeHtml(m.calculation) + "</code> = <strong>" +
+            fmtNumber(m.value) + "</strong></div>";
+        }).join("") +
+        '<div class="chain-step"><span class="step-tag">logic</span>' +
+        escapeHtml(chain.detection_logic) + "</div>";
+
+      const tbody = document.getElementById("evidence-body");
+      tbody.innerHTML = chain.records.length
+        ? chain.records.map(function (r) {
+            const rec = { record_type: r.record_type, record_id: r.record_id,
+              key_fields: r.key_fields };
+            return '<tr class="expandable" data-rec=\'' +
+              escapeHtml(JSON.stringify(rec)) + "'><td><code>" +
+              escapeHtml(r.record_id) + "</code></td><td>" +
+              escapeHtml(r.record_type) + "</td><td>" +
+              Object.keys(r.key_fields || {}).map(function (k) {
+                return k + "=" + String(r.key_fields[k]);
+              }).join(", ") + "</td><td>" + escapeHtml(r.relevance) +
+              "</td></tr>" + detailRow(r);
+          }).join("")
+        : '<tr><td colspan="4" class="muted">No individual records were ' +
+          "attached to this finding (metric-level signal).</td></tr>";
+
+      document.getElementById("missing-records").innerHTML =
+        chain.missing_records.map(function (m) {
+          return '<p class="missing-note">Referenced record not found: ' +
+            "<code>" + escapeHtml(m.record_id) + "</code> — " +
+            escapeHtml(m.note) + "</p>";
+        }).join("");
+
+      // Expandable record detail rows
+      tbody.addEventListener("click", function (ev) {
+        const tr = ev.target.closest("tr.expandable");
+        if (!tr) return;
+        const det = tr.nextElementSibling;
+        if (det) det.hidden = !det.hidden;
+      });
+    }
+
+    // Recommended examiner actions
+    const actions = document.getElementById("actions-list");
+    actions.innerHTML = (f.recommended_actions || []).length
+      ? (f.recommended_actions || []).map(function (a) {
+          return "<li>" + escapeHtml(a) + "</li>"; }).join("")
+      : '<li class="muted">None recorded.</li>';
+
+    // Optional LLM narrative — always clearly labeled when present.
+    if (body.data.narrative) {
+      const panel = document.createElement("section");
+      panel.className = "panel";
+      panel.style.borderLeft = "4px solid var(--medium)";
+      panel.innerHTML = "<h2>Generated Narrative</h2><p class='muted'>" +
+        escapeHtml(body.data.narrative.label) + "</p><p>" +
+        escapeHtml(body.data.narrative.explanation).replace(/\n/g, "<br>") +
+        "</p>" + ((body.data.narrative.questions || []).length
+          ? "<ul>" + body.data.narrative.questions.map(function (q) {
+              return "<li>" + escapeHtml(q) + "</li>"; }).join("") +
+            "</ul>" : "");
+      document.querySelector(".container").appendChild(panel);
+    }
+
+    loadFindingPeerContext(f);
+  } catch (err) {
+    setError(document.getElementById("rationale"), err.message);
+  }
+}
+
+async function loadFindingPeerContext(finding) {
+  const panel = document.getElementById("peer-context-panel");
+  const box = document.getElementById("peer-context");
+  try {
+    const body = await fetchJSON("/api/peers/" +
+      encodeURIComponent(finding.cse_id));
+    const d = body.data;
+    if (!d.benchmarks.length) return;   // keep panel hidden
+    const outliers = d.benchmarks.filter(function (b) {
+      return b.is_outlier; });
+    panel.hidden = false;
+    box.innerHTML = "<p class='muted'>" + escapeHtml(d.group_label) +
+      " — " + escapeHtml(d.group_definition) + "</p>" +
+      (outliers.length
+        ? "<ul>" + outliers.map(function (b) {
+            return "<li><code>" + escapeHtml(b.metric) + "</code>: " +
+              fmtNumber(b.value) + " vs peers " + fmtNumber(b.peer_mean) +
+              " (z " + fmtNumber(b.z_score) + ")</li>";
+          }).join("") + "</ul>"
+        : "<p class='muted'>No metric flagged as a peer outlier.</p>");
+  } catch (err) { /* peer context is best-effort */ }
+}

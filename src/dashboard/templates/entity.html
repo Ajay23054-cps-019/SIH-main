@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ cse_id }} &middot; SAT-SA{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="/dashboard/">&larr; Portfolio</a></p>
+<h1 id="entity-title">{{ cse_id }}</h1>
+<div id="entity-attrs" class="muted"></div>
+
+<section class="panel">
+  <h2>Behavioral Profile <span class="muted">(period: ALL)</span></h2>
+  <div class="summary-cards">
+    <div class="card">
+      <div class="card-label">Alert Volume</div>
+      <div class="card-value" id="m-alert_volume_total">&ndash;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Investigation Depth</div>
+      <div class="card-value" id="m-inv_depth_mean">&ndash;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Closure Velocity</div>
+      <div class="card-value" id="m-closure_velocity_median_h">&ndash;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Escalation Rate</div>
+      <div class="card-value" id="m-esc_rate">&ndash;</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Findings</h2>
+  <ul id="findings-list" class="findings-list">
+    <li class="loading">Loading&hellip;</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Peer Comparison</h2>
+  <p id="peer-group-note" class="muted"></p>
+  {# Canvas for Chart.js when available; CSS bars render regardless #}
+  <canvas id="peer-chart" width="640" height="280"
+          aria-label="Peer comparison bar chart" role="img"></canvas>
+  <div id="peer-bars" class="peer-bars"></div>
+</section>
+
+<section class="panel">
+  <h2>Recommended Actions</h2>
+  <ul id="actions-list"><li class="loading">Loading&hellip;</li></ul>
+</section>
+{% endblock %}

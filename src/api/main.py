@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from src.api.errors import install_error_handlers
 from src.api.middleware import install_middleware
@@ -47,6 +48,13 @@ def create_app(db_path: Union[str, Path, None] = None) -> FastAPI:
     install_middleware(app)
     install_error_handlers(app)
     app.include_router(router)
+
+    # Examiner dashboard (Phase 11): server-rendered shells + static assets.
+    from src.dashboard.routes import STATIC_DIR, router as dashboard_router
+
+    app.include_router(dashboard_router)
+    app.mount("/dashboard/static", StaticFiles(directory=STATIC_DIR),
+              name="dashboard_static")
 
     @app.get("/health", tags=["system"])
     def root_health():

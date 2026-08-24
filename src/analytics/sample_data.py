@@ -85,6 +85,26 @@ _CSE_ID_POOL_TAIL = tuple(
     f"CSE-{i:03d}" for i in (55, 61, 73, 89, 91, 94, 97, 99)
 )
 
+# Scenario -> signal types the engine must fire for the pipeline acceptance
+# check ("all eight seeded weaknesses detected"). Kept next to SEEDED_SCENARIOS
+# so scripts/run_pipeline.py and tests share one source of truth.
+SCENARIO_SIGNALS = {
+    "degrading_depth": {"quality_degradation", "temporal_drift"},
+    "superficial_closures": {"superficial_closure"},
+    "missing_telemetry": {"missing_alert_categories"},
+    "missing_investigations": {"missing_investigations"},
+    "fast_closure_outlier": {"closure_velocity_outlier"},
+    "weekend_escalation_gap": {"escalation_absence"},
+    "templated_investigations": {"template_investigation"},
+    "combined_weak": {"investigation_depth_outlier"},
+}
+
+
+def expected_seed_signals() -> Dict[str, set]:
+    """cse_id -> set of signal types that must fire for that seeded CSE."""
+    return {cid: set(SCENARIO_SIGNALS[name])
+            for cid, name in SEEDED_SCENARIOS.items()}
+
 TEXT_BANKS = {
     "findings": [
         "no malicious activity identified after log correlation",

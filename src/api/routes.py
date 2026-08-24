@@ -329,11 +329,36 @@ def _ranked_scores(db_path: Path):
 @router.get("/portfolio/rankings")
 def portfolio_rankings(db_path: Path = Depends(get_db_path)):
     ranked = _ranked_scores(db_path)
+
+    # Dashboard context: sector/size and each CSE's most serious signal.
+    frames = _load_frames(db_path)
+    metadata = frames.get("cse_metadata")
+    attrs: Dict[str, Dict[str, Any]] = {}
+    if metadata is not None and len(metadata):
+        for _, row in metadata.iterrows():
+            attrs[str(row["cse_id"])] = {
+                "sector": row.get("sector"), "size_band": row.get("size_band"),
+            }
+    rank_sev = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+    top_signal: Dict[str, Finding] = {}
+    for f in _findings(db_path):
+        cur = top_signal.get(f.cse_id)
+        if cur is None or (rank_sev.get(f.severity, 0),
+                           f.confidence) > (rank_sev.get(cur.severity, 0),
+                                            cur.confidence):
+            top_signal[f.cse_id] = f
+
     data = [{
         "cse_id": s.cse_id, "priority": s.priority,
         "n_findings": s.n_findings, "n_signal_types": s.n_signal_types,
         "avg_confidence": s.avg_confidence, "components": s.components,
         "explanation": s.explanation(),
+        "sector": attrs.get(s.cse_id, {}).get("sector"),
+        "size_band": attrs.get(s.cse_id, {}).get("size_band"),
+        "top_signal": (top_signal[s.cse_id].signal_type
+                       if s.cse_id in top_signal else None),
+        "top_signal_severity": (top_signal[s.cse_id].severity
+                                if s.cse_id in top_signal else None),
     } for s in ranked]
     return envelope(data, meta={
         "disclaimer": ("Supervisory Attention Priority — review "
