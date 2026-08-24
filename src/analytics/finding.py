@@ -129,6 +129,18 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
         "min_group_size": 3,       # below this, peer deviation is meaningless
         "outlier_z": 2.5,          # |modified z| beyond this flags
     },
+    "benchmarking": {
+        "min_group_size": 3,       # group members (incl. self) needed to score
+        "outlier_z": 2.5,          # plain z-score outlier threshold
+    },
+    "scoring": {
+        "confidence_weight": 0.4,  # weight of mean finding confidence
+        "severity_weight": 0.3,    # weight of mean severity points
+        "breadth_weight": 0.3,     # weight of (count + diversity) blend
+        "signal_count_target": 10, # findings at which count score saturates
+        "max_diversity_categories": 4,
+        "scale": 100,              # final priority scale (0-100)
+    },
     "superficial_closure": {
         "max_closure_hours": 2.0,      # median alert->closure at/below this = fast
         "shallow_depth_max": 2.0,      # median evidence entries at/below this = shallow

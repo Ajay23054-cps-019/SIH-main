@@ -1,5 +1,5 @@
 {
-  "_readme": "Tunable thresholds for every supervisory signal. Values here are deep-merged over the code defaults in src/analytics/finding.py. No regulatory values are hardcoded anywhere else.",
+  "_readme": "Deep-merged over code defaults (src/analytics/finding.py DEFAULT_THRESHOLDS). Delete keys to fall back to code values.",
   "_global": {
     "quality_gate": 0.5,
     "max_record_ids": 25
@@ -7,6 +7,18 @@
   "peer": {
     "min_group_size": 3,
     "outlier_z": 2.5
+  },
+  "benchmarking": {
+    "min_group_size": 3,
+    "outlier_z": 2.5
+  },
+  "scoring": {
+    "confidence_weight": 0.4,
+    "severity_weight": 0.3,
+    "breadth_weight": 0.3,
+    "signal_count_target": 10,
+    "max_diversity_categories": 4,
+    "scale": 100
   },
   "superficial_closure": {
     "max_closure_hours": 2.0,

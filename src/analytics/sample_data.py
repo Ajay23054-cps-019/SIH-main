@@ -197,8 +197,23 @@ class EntitySpec:
     scenario: ScenarioParams
 
 
+# Joint sector x size quotas — identical marginals to SECTOR_TARGETS and
+# SIZE_TARGETS, but every realised cell holds >= 3 members so each cell is a
+# usable peer group for benchmarking (min peer group size: 3).
+COMBO_TARGETS = {
+    "Telecom": {"Small": 4, "Medium": 10, "Large": 6},
+    "Financial Services": {"Small": 3, "Medium": 8, "Large": 4},
+    "Power & Energy": {"Small": 3, "Medium": 7, "Large": 5},
+}
+assert {s: sum(bands.values()) for s, bands in COMBO_TARGETS.items()} \
+    == dict(SECTOR_TARGETS), "sector marginals must match SECTOR_TARGETS"
+assert {b: sum(bands[b] for bands in COMBO_TARGETS.values())
+        for b, _ in SIZE_TARGETS} == dict(SIZE_TARGETS), \
+    "size marginals must match SIZE_TARGETS"
+
+
 def _assign_entities(rng: np.random.Generator) -> List[EntitySpec]:
-    """Build 50 EntitySpecs honouring sector/size targets and pinned scenarios."""
+    """Build 50 EntitySpecs honouring sector/size quotas and pinned scenarios."""
     ids = list(_CSE_ID_POOL_HEAD) + list(_CSE_ID_POOL_TAIL)
     assert len(set(ids)) == 50, "CSE ID pool must contain 50 unique IDs"
 
@@ -222,32 +237,32 @@ def _assign_entities(rng: np.random.Generator) -> List[EntitySpec]:
         "CSE-073": "Medium",
         "CSE-019": "Small",
     }
+    assert all(pinned_sector[cid] in COMBO_TARGETS
+               and pinned_size[cid] in COMBO_TARGETS[pinned_sector[cid]]
+               for cid in pinned_sector), "pinned pair must fit quota table"
 
-    sectors_left = dict(SECTOR_TARGETS)
-    sizes_left = dict(SIZE_TARGETS)
-    for sid in pinned_sector.values():
-        sectors_left[sid] -= 1
-    for s in pinned_size.values():
-        sizes_left[s] -= 1
+    slots = [(sector, band)
+             for sector, bands in COMBO_TARGETS.items()
+             for band, count in bands.items()
+             for _ in range(count)]
+    assert len(slots) == len(ids)
 
-    unpinned = [cid for cid in ids if cid not in pinned_sector]
+    assigned: Dict[str, tuple] = {}
+    for cid in ids:
+        if cid in pinned_sector:
+            pair = (pinned_sector[cid], pinned_size[cid])
+            slots.remove(pair)          # consume one slot of that exact pair
+            assigned[cid] = pair
+
+    unpinned = [cid for cid in ids if cid not in assigned]
     rng.shuffle(unpinned)
-
-    sector_pool: List[str] = []
-    for sector, _ in SECTOR_TARGETS:
-        sector_pool.extend([sector] * sectors_left[sector])
-    size_pool: List[str] = []
-    for band, _ in SIZE_TARGETS:
-        size_pool.extend([band] * sizes_left[band])
+    rng.shuffle(slots)
+    for cid, slot in zip(unpinned, slots):
+        assigned[cid] = slot
 
     specs: List[EntitySpec] = []
     for cid in ids:
-        if cid in pinned_sector:
-            sector = pinned_sector[cid]
-            band = pinned_size[cid]
-        else:
-            sector = sector_pool.pop()
-            band = size_pool.pop()
+        sector, band = assigned[cid]
         scenario_name = SEEDED_SCENARIOS.get(cid, "baseline")
         specs.append(EntitySpec(cid, sector, band, SCENARIOS[scenario_name]))
     return specs

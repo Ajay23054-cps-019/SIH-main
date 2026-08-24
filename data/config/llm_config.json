@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "provider": "ollama",
+  "model": "llama3:8b",
+  "endpoint": "http://localhost:11434/api/generate",
+  "timeout_seconds": 30,
+  "max_tokens": 500
+}

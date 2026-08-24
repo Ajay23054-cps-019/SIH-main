@@ -134,6 +134,10 @@ def _detect_peer_outlier(
             "peer_median": stat["median"],
             "peer_mad": stat["mad"],
             "peer_group_size": int(stat["n"]),
+            "peer_group": (
+                f"portfolio-wide baseline over {int(stat['n'])} CSE profiles "
+                f"(no sector/size split; see src/analytics/benchmarking.py "
+                f"for grouped comparison)"),
             "modified_z": round(z, 3),
             "outlier_threshold_z": outlier_z,
             "direction": direction,
