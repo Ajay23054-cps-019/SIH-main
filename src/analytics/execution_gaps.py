@@ -13,6 +13,7 @@ import numpy as np
 from src.analytics.finding import (
     Finding,
     combined_confidence,
+    cap_ids,
     finding_id,
     margin_above,
     margin_below,
@@ -249,7 +250,7 @@ def detect_severity_mismatch(ctx: SignalContext) -> Optional[Finding]:
             "Request closure justification for flagged alert IDs",
             "Re-open a sample of uninvestigated high-severity closures",
         ],
-        record_ids=missing["alert_id"].tolist(),
+        record_ids=cap_ids(missing["alert_id"].tolist(), ctx.thresholds),
         quality_notes=_profile_quality_notes(prof),
     )
     f.severity = severity_from(margin)

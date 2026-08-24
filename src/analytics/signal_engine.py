@@ -143,6 +143,32 @@ _FINDING_COLUMNS = (
 )
 
 
+def clear_findings(db_path: Path, cse_id: Optional[str] = None,
+                   category: Optional[str] = None) -> int:
+    """Delete stored findings for a recompute scope (signals are
+    deterministic, so a sweep's output replaces its prior state)."""
+    from sqlalchemy import text
+
+    from src.storage.db import get_engine
+
+    clauses, params = [], {}
+    if cse_id:
+        clauses.append("cse_id = :cse_id")
+        params["cse_id"] = cse_id
+    if category:
+        clauses.append("signal_category = :category")
+        params["category"] = category
+    if not clauses:
+        query = "DELETE FROM findings"
+    else:
+        query = "DELETE FROM findings WHERE " + " AND ".join(clauses)
+    engine = get_engine(db_path)
+    with engine.begin() as conn:
+        conn.execute(text(FINDINGS_TABLE_SQL))
+        result = conn.execute(text(query), params)
+    return getattr(result, "rowcount", 0) or 0
+
+
 def store_findings(findings: List[Any], db_path: Path) -> int:
     from sqlalchemy import text
 
@@ -235,6 +261,7 @@ def run_signals(db_path: Path, cse_id: Optional[str] = None,
     findings: List[Any] = []
     for ctx in contexts.values():
         findings.extend(run_context(ctx, only=only))
+    clear_findings(db_path, cse_id=cse_id, category=category)
     store_findings(findings, db_path)
     return findings
 

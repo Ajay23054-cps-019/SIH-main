@@ -64,7 +64,7 @@
     "min_quiet_periods": 18,
     "quiet_gap_hours": 48,
     "max_gap_hours": 120,
-    "gap_median_multiple": 30
+    "gap_median_multiple": 75
   },
   "bulk_closure_pattern": {
     "burst_factor": 4.0,

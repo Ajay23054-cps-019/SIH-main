@@ -13,6 +13,7 @@ import pandas as pd
 
 from src.analytics.execution_gaps import make_finding
 from src.analytics.finding import (
+    cap_ids,
     combined_confidence,
     margin_above,
     margin_below,
@@ -128,7 +129,7 @@ def detect_missing_investigations(ctx: SignalContext) -> Optional[Finding]:
             "Request investigation records for the flagged alert IDs",
             "Confirm whether the alerts were triaged outside this system",
         ],
-        record_ids=missing["alert_id"].tolist(),
+        record_ids=cap_ids(missing["alert_id"].tolist(), ctx.thresholds),
     )
     f.severity = severity_from(margin)
     return f

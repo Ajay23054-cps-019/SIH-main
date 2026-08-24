@@ -185,7 +185,7 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
         "min_quiet_periods": 18,       # gaps > quiet_gap_hours within the window
         "quiet_gap_hours": 48,
         "max_gap_hours": 120,          # single gap beyond this flags outright
-        "gap_median_multiple": 30,     # ...or max gap vs own median cadence
+        "gap_median_multiple": 75,     # ...or max gap vs own median cadence
     },
     "bulk_closure_pattern": {
         "burst_factor": 4.0,           # peak-day closures / median day
