@@ -1,4 +1,4 @@
-.PHONY: setup test run clean lint
+.PHONY: setup test run clean lint demo validate pipeline data
 
 setup:
 	python3 -m venv venv
@@ -10,6 +10,19 @@ test:
 
 run:
 	. venv/bin/activate && uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+
+data:
+	. venv/bin/activate && python scripts/generate_sample_data.py
+
+pipeline:
+	. venv/bin/activate && python scripts/run_pipeline.py
+
+validate:
+	. venv/bin/activate && python scripts/run_validation.py
+
+demo: pipeline
+	@echo "Dashboard: http://localhost:8000/dashboard/"
+	. venv/bin/activate && uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

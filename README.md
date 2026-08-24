@@ -1261,9 +1261,8 @@ SIH/
 
 ### Prerequisites
 
-- Python 3.9+
-- Docker (for containerised deployment)
-- PostgreSQL (for structured data storage)
+- Python 3.10+ (developed on 3.14; no Node.js, no build step)
+- Storage: SQLite (file-based, zero administration)
 
 ### Setup
 
@@ -1273,22 +1272,27 @@ git clone <repository-url>
 cd SIH
 
 # Create virtual environment
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env with local paths and settings
+# Generate the demo dataset (deterministic, seed 42) into
+# data/samples/demo_dataset/
+make data            # or: python scripts/generate_sample_data.py
 
-# Initialise database
-# (Commands to be provided as implementation progresses)
+# Run the full pipeline: ingest → profile → signals → peers → ranking
+make pipeline        # or: python scripts/run_pipeline.py
 
-# Run application
-# (Commands to be provided as implementation progresses)
+# Optional: validation harness -> docs/validation_report.md
+make validate        # or: python scripts/run_validation.py
+
+# Serve API + dashboard at http://localhost:8000/dashboard/
+make demo            # or: make run for auto-reload dev mode
 ```
+
+Run the test suite with `make test` (~270 tests).
 
 ### Offline Execution
 

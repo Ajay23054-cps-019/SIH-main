@@ -1,10 +1,30 @@
 # SAT-SA — Start Here
 
 **Last updated:** 2026-08-24  
-**Current status:** Docs only — no source code yet  
-**Next action:** Execute Phase 0 → Phase 1 → Phase 2 → Phase 3 in sequence
+**Current status:** Phases 0–14 complete — full pipeline, API, dashboard,
+validation harness, and demo materials. Suite: **276+ tests passing**.
+Validation: 8/8 seeded weaknesses detected, 0 HIGH false alarms
+(`docs/validation_report.md`).  
+**Next action:** Demo rehearsal (`make demo`, script in
+`docs/demo_script.md`) or post-MVP phases in `phases.md`.
+
+## Quick commands
+
+```bash
+make setup        # venv + deps
+make data         # generate demo CSVs (seed 42)
+make pipeline     # ingest → profile → signals → peers → ranking
+make validate     # validation harness → docs/validation_report.md
+make demo         # rebuild store, then serve dashboard at :8000/dashboard/
+make test         # full test suite
+```
 
 ---
+
+## Original Build Plan (reference)
+
+The phase-by-phase build order below was executed sequentially; each
+phase's acceptance criteria are covered by tests under `tests/`.
 
 ## Immediate Execution Order
 
