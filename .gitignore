@@ -1,0 +1,17 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment
+.env
+
+# Local databases
+*.db
+data/*.db
+
+# Generated sample data (regenerate with scripts/generate_sample_data.py)
+data/samples/demo_dataset/
+data/samples/*.csv
+data/profiles.db
