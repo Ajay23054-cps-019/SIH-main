@@ -381,6 +381,20 @@ def load_profiles(db_path: Path, cse_id: Optional[str] = None) -> pd.DataFrame:
     return df
 
 
+def rows_to_profiles(df: pd.DataFrame) -> List[BehavioralProfile]:
+    """Reconstruct BehavioralProfile objects from ``load_profiles`` rows."""
+    return [
+        BehavioralProfile(
+            cse_id=row.cse_id,
+            period=row.period,
+            metrics=row.metrics,
+            warnings=list(row.warnings),
+            n_alerts=int(row.n_alerts or 0),
+        )
+        for row in df.itertuples()
+    ]
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
