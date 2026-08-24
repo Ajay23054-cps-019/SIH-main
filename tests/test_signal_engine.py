@@ -38,19 +38,13 @@ from src.analytics.signal_engine import (
 DEMO_DIR = Path("data/samples/demo_dataset")
 ENTITY_TYPES = ("cse_metadata", "alerts", "investigations",
                 "escalations", "cases", "assets")
-SEEDED = {"CSE-042", "CSE-017", "CSE-089", "CSE-031",
-          "CSE-055", "CSE-073", "CSE-019", "CSE-061"}
 
-EXPECTED_SEED_SIGNALS = {
-    "CSE-042": {"quality_degradation", "temporal_drift"},
-    "CSE-017": {"superficial_closure"},
-    "CSE-089": {"missing_alert_categories"},
-    "CSE-031": {"missing_investigations"},
-    "CSE-055": {"closure_velocity_outlier"},
-    "CSE-073": {"escalation_absence"},
-    "CSE-019": {"template_investigation"},
-    "CSE-061": {"investigation_depth_outlier"},
-}
+# Canonical expectations live next to the generator (single source of truth
+# shared with scripts/run_pipeline.py).
+from src.analytics.sample_data import expected_seed_signals  # noqa: E402
+
+EXPECTED_SEED_SIGNALS = expected_seed_signals()
+SEEDED = set(EXPECTED_SEED_SIGNALS)
 
 
 # ---------------------------------------------------------------------------

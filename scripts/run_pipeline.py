@@ -168,22 +168,28 @@ def run_pipeline(db_path: Path = DEFAULT_DB,
           "NOT a risk or compliance score)")
 
     # Acceptance checks -------------------------------------------------------
+    # Only enforced for seeded CSEs actually present in this dataset, so
+    # --cses smoke runs are not failed by design.
     fired: Dict[str, set] = {}
     for f in findings:
         fired.setdefault(f.cse_id, set()).add(f.signal_type)
+    wanted_all = expected_seed_signals()
     checks = []
-    for cse_id, wanted in expected_seed_signals().items():
+    for cse_id, wanted in wanted_all.items():
+        if cse_id not in all_ids:
+            continue
         missing = wanted - fired.get(cse_id, set())
         checks.append({"cse_id": cse_id, "expected": sorted(wanted),
                        "missing": sorted(missing), "ok": not missing})
     rank_positions = {s.cse_id: i + 1 for i, s in enumerate(ranked)}
-    top10_seeded = [c for c in expected_seed_signals()
-                    if rank_positions.get(c, 10 ** 9) <= 10]
+    top10_seeded = [c for c in wanted_all if c in all_ids
+                    and rank_positions.get(c, 10 ** 9) <= 10]
+    n_applicable = sum(1 for c in wanted_all if c in all_ids)
     checks.append({
         "check": "seeded_cses_in_top10",
         "found": top10_seeded, "count": len(top10_seeded),
-        "ok": len(top10_seeded) >= 8 if len(expected_seed_signals()) == 8
-        else bool(top10_seeded),
+        "applicable": n_applicable,
+        "ok": len(top10_seeded) == n_applicable,
     })
 
     elapsed = time.perf_counter() - started
