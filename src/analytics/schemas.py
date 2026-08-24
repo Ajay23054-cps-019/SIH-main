@@ -204,7 +204,7 @@ class Dataset(BaseModel):
         for field_name in self.ENTITY_FIELDS:
             records = getattr(self, field_name)
             rows = [r.model_dump(mode="python") for r in records]
-            columns = list(records[0].model_fields.keys()) if records else []
+            columns = list(type(records[0]).model_fields.keys()) if records else []
             frames[field_name] = pd.DataFrame(rows, columns=columns)
         return frames
 
