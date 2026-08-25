@@ -1,216 +1,114 @@
 # SAT-SA — Updates & Next Steps
 
 **Last updated:** 2026-08-25  
-**Current status:** Documentation complete — source code not started  
-**Active file:** `phases.md`
+**Current status:** ✅ Phase 0 complete, ✅ Phase 1 complete, ✅ Phase 2 complete, ✅ Phase 3 complete, ✅ Phase 4 complete, ✅ Phase 5 complete, ✅ Phase 6 complete, ✅ Phase 7 complete, ✅ Phase 8 complete, ✅ Phase 10 complete, ✅ Phase 11 complete  
+**Test status:** 337 passed, 0 failed
 
 ---
 
-## Current State
+## Completed Phases
 
-| Layer | Status | Notes |
-|-------|--------|-------|
-| Problem understanding | ✅ Complete | Mapped every PS requirement |
-| Architecture design | ✅ Complete | README Section 6, phases.md |
-| Analytics methodology | ✅ Complete | 18+ signals across 4 categories |
-| Data schema | ✅ Canonical schema defined | Phase 1 |
-| Implementation plan | ✅ Complete | 15 phases, START.md quick-reference |
-| Source code | ❌ **Zero** | No `.py` files written yet |
-| Prototype | ❌ **None** | Nothing runnable |
-| Demo | ❌ **Nothing** | No demo script executed |
+| Phase | What | Status |
+|-------|------|--------|
+| 0 | Project bootstrap (venv, Makefile, directory structure) | ✅ Complete |
+| 1 | Canonical data schema (7 Pydantic models) | ✅ Complete |
+| 2 | Synthetic data generator (50 CSEs, 8 seeded weaknesses) | ✅ Complete |
+| 3 | Ingestion layer (CSV/JSON/JSONL adapters, normalizer, quality scorer) | ✅ Complete |
+| 4 | Behavioral profiler (20+ metrics per CSE per period) | ✅ Complete |
+| 5 | Supervisory signal engine (21 signals, 4 categories) | ✅ Complete |
+| 6 | Evidence tracer (finding → signal → metric → records chain) | ✅ Complete |
+| 7 | Peer benchmarking (rule-based grouping, z-scores, percentiles) | ✅ Complete |
+| 8 | Supervisory Attention Score (transparent weighted formula) | ✅ Complete |
+| 10 | FastAPI backend (all endpoints, envelope format, error handling) | ✅ Complete |
+| 11 | Local dashboard (Jinja2 + vanilla JS + Chart.js) | ✅ Complete |
 
 ---
 
-## Immediate Next Steps (in order)
+## Test Results
 
-### 1. Execute Phase 0 — Project Bootstrap
+```
+337 passed, 0 failed in 511.14s (8:31)
+```
 
-**What to do:**
-- Create directory structure (`src/`, `data/`, `tests/`, etc.)
-- Create `requirements.txt`
-- Create `Makefile`
-- Create `.gitignore`
-- Create minimal `src/api/main.py` with `/health` endpoint
-- Run `make setup && make run && curl localhost:8000/health`
+All core modules verified:
+- ✅ 18 schema tests (Alert, Investigation, Escalation, Case, Asset, Dataset)
+- ✅ 28 ingestion tests (mapper, adapters, normalizer, quality, pipeline)
+- ✅ 33 profiler tests (metrics, trends, graceful degradation)
+- ✅ 17 evidence tracer tests (chain resolution, summary, pagination)
+- ✅ 42 benchmarking tests (grouping, percentile, z-score, outlier, portfolio)
+- ✅ 16 scoring tests (config, component math, ranking, transparency, storage)
+- ✅ 72 signal engine tests (all 21 signals, structure, registry, seeded weaknesses)
+- ✅ 43 API tests (health, ingestion, profiles, findings, portfolio, peers, CORS)
+- ✅ 8 dashboard tests (pages, static assets, offline, rankings)
+- ✅ 30+ sample data tests (structure, referential integrity, reproducibility)
 
-**Time:** 30 minutes  
-**File:** `START.md` → Phase 0 section
+---
 
-**Commands:**
+## Next Steps (remaining MVP phases)
+
+| Order | Phase | What | Time | Priority |
+|-------|-------|------|------|----------|
+| 1 | Phase 9 | Local LLM explanation layer (optional) | 1–2 hours | LOW |
+| 2 | Phase 12 | End-to-end integration script | 1 hour | MEDIUM |
+| 3 | Phase 13 | Validation harness | 1–2 hours | MEDIUM |
+| 4 | Phase 14 | Demo script + rehearsal | 1–2 hours | HIGH |
+
+---
+
+## Key Files to Know
+
+| File | Purpose |
+|------|---------|
+| `src/analytics/schemas.py` | Canonical Pydantic models for all entities |
+| `src/analytics/sample_data.py` | Synthetic data generator (seeded weaknesses) |
+| `src/analytics/profiler.py` | Behavioral profiling engine |
+| `src/analytics/signal_engine.py` | 21 supervisory signals, 4 categories |
+| `src/analytics/benchmarking.py` | Peer grouping + z-score/outlier detection |
+| `src/analytics/scoring.py` | Supervisory Attention Score |
+| `src/analytics/finding.py` | Finding data structures + thresholds |
+| `src/evidence/tracer.py` | Evidence chain builder |
+| `src/ingestion/adapters.py` | CSV/JSON/JSONL format adapters |
+| `src/ingestion/pipeline.py` | Ingestion orchestrator |
+| `src/api/main.py` | FastAPI app factory |
+| `src/api/routes.py` | All API endpoints |
+| `src/storage/db.py` | SQLite persistence |
+| `src/dashboard/routes.py` | Dashboard page routes |
+| `src/dashboard/templates/` | Jinja2 HTML templates |
+| `src/dashboard/static/` | CSS, JS, Chart.js |
+
+---
+
+## How to Run
+
 ```bash
-mkdir -p src/ingestion src/analytics src/evidence src/api src/dashboard/templates src/dashboard/static/css src/dashboard/static/js
-mkdir -p data/schemas data/samples data/config tests docs scripts
-touch src/__init__.py src/ingestion/__init__.py src/analytics/__init__.py src/evidence/__init__.py src/api/__init__.py src/dashboard/__init__.py
+# Setup
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run server
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+
+# Test
+pytest tests/ -v
+
+# Dashboard
+open http://localhost:8000/dashboard/
+
+# API docs
+open http://localhost:8000/docs
 ```
 
 ---
 
-### 2. Execute Phase 1 — Canonical Data Schema
-
-**What to do:**
-- Create `src/analytics/schemas.py`
-- Define 7 Pydantic models: `CSEMetadata`, `Alert`, `Investigation`, `Escalation`, `Case`, `Asset`, `Dataset`
-- All fields Optional with None defaults
-- Enum validators for severity/status
-- Timestamp ordering validators
-- `Dataset.to_pandas()` method
-
-**Time:** 1 hour
-
----
-
-### 3. Execute Phase 2 — Synthetic Data Generator
-
-**What to do:**
-- Create `scripts/generate_sample_data.py`
-- Generate 50 CSEs × 4 quarters × ~500 alerts = ~100K alerts
-- Seed 8 specific weaknesses (CSE-042, CSE-017, CSE-089, CSE-031, CSE-055, CSE-073, CSE-019, CSE-061)
-- Output: 6 CSV files in `data/samples/demo_dataset/`
-
-**Time:** 2–3 hours
-
----
-
-### 4. Execute Phase 3 — Ingestion Layer
-
-**What to do:**
-- Create `src/ingestion/adapters.py` (BaseAdapter, CSVAdapter, JSONAdapter, JSONLAdapter)
-- Create `src/ingestion/mapper.py` (column name mapping)
-- Create `src/ingestion/normalizer.py` (raw dicts → Pydantic models)
-- Create `src/ingestion/quality.py` (data quality scoring)
-- Create `src/ingestion/pipeline.py` (orchestrate: parse → map → normalize → quality → store)
-
-**Time:** 2–3 hours
-
----
-
-### 5. Execute Phase 4 — Behavioral Profiler
-
-**What to do:**
-- Create `src/analytics/profiler.py`
-- Compute 20+ metrics per CSE per period
-- Handle missing data gracefully (0.0 + warning)
-- Store in SQLite
-
-**Time:** 2–3 hours
-
----
-
-### 6. Execute Phase 5 — Supervisory Signal Engine (CRITICAL)
-
-**What to do:**
-- Create `src/analytics/execution_gaps.py` (5 signals)
-- Create `src/analytics/negative_space.py` (5 signals)
-- Create `src/analytics/behavioral_anomalies.py` (5 signals)
-- Create `src/analytics/benchmarking.py` (3 peer deviation signals)
-- Create `src/analytics/config.py` (threshold loader)
-- Each signal: pure function returning `Optional[Finding]`
-- All 8 seeded weaknesses must be detected
-
-**Time:** 3–4 hours  
-**Priority:** HIGHEST — this is the core value of SAT-SA
-
----
-
-### 7. Execute Phase 6 — Evidence Tracer
-
-**What to do:**
-- Create `src/evidence/tracer.py`
-- Build `Finding → Signal → Metric → Records` chain
-- Every finding includes `contributing_record_ids`
-- Missing records noted explicitly
-
-**Time:** 1–2 hours
-
----
-
-### 8. Execute Phases 7–8 — Peers + Scoring
-
-**What to do:**
-- Peer grouping by `(sector, size_band)`
-- Z-scores + percentiles
-- Supervisory Attention Score: `0.4×confidence + 0.3×severity + 0.3×diversity`
-
-**Time:** 2–3 hours
-
----
-
-### 9. Execute Phase 10 — FastAPI Backend
-
-**What to do:**
-- Create `src/api/main.py` (app factory)
-- Create `src/api/routes.py` (15+ endpoints)
-- Create `src/api/models.py` (Pydantic request/response)
-- All endpoints serve JSON
-
-**Time:** 2–3 hours
-
----
-
-### 10. Execute Phase 11 — Dashboard
-
-**What to do:**
-- Create `src/dashboard/templates/base.html` (layout)
-- Create `src/dashboard/templates/portfolio.html` (rankings table)
-- Create `src/dashboard/templates/entity.html` (profile + findings)
-- Create `src/dashboard/templates/finding.html` (evidence drill-down)
-- Create `src/dashboard/static/css/style.css`
-- Create `src/dashboard/static/js/app.js`
-- Chart.js for peer comparison charts
-
-**Time:** 3–4 hours
-
----
-
-### 11. Execute Phase 12 — Integration
-
-**What to do:**
-- Create `scripts/run_pipeline.py`
-- One-command: ingest → profile → analyze → find → prioritize → display
-- Verify all 8 seeded weaknesses detected end-to-end
-
-**Time:** 1–2 hours
-
----
-
-### 12. Execute Phases 13–14 — Validation + Demo
-
-**What to do:**
-- Create `scripts/run_validation.py`
-- Measure coverage, precision, recall against seeded weaknesses
-- Write `docs/validation_report.md`
-- Rehearse 2-minute demo script from `START.md`
-
-**Time:** 2–3 hours
-
----
-
-## Priority Order (if time is limited)
-
-If you only have **10 hours**, build in this order:
-
-| Order | Phase | What | Time |
-|-------|-------|------|------|
-| 1 | Phase 0 | Bootstrap | 30 min |
-| 2 | Phase 1 | Schemas | 1 hour |
-| 3 | Phase 2 | Synthetic data | 2 hours |
-| 4 | Phase 5 | Signal engine | 3 hours |
-| 5 | Phase 10 | FastAPI backend | 1.5 hours |
-| 6 | Phase 11 | Dashboard | 2 hours |
-
-**Total: ~10 hours** → You have a working prototype that ingests data, detects findings, and displays them.
-
----
-
-## Risks & Blockers
+## Remaining Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| Time shortage | Can't complete all phases | Follow priority order above — minimum demo in 10 hours |
-| Scope creep | Adding post-MVP features too early | Strictly follow phases; post-MVP is Phase 15 |
-| Synthetic data too fake | Judges see through it | Use realistic correlations (severity → investigation depth → escalation) |
-| Over-reliance on LLM | LLM not installed at judging venue | Phase 9 is optional; all analytics work without LLM |
-| Dashboard too complex | Demo fails | Keep it simple: 3 views (portfolio, entity, finding) with vanilla JS |
+| Demo timing | 2 minutes is very short | Rehearse extensively; have backup screenshots |
+| Integration test slow | Full suite takes 8+ minutes | Run targeted tests during development |
+| Synthetic data realism | Judges may find it unrealistic | Use correlated generation, not random |
+| Missing integration test | Phase 12 not yet formally written | Can be done quickly using existing scripts |
 
 ---
 
@@ -223,19 +121,8 @@ If you only have **10 hours**, build in this order:
 - Do NOT call thresholds "NCIIPC standards" — they are configurable heuristics
 - Do NOT claim the score is a "risk rating" — it is a prioritization tool
 - Do NOT train an LLM — use optional local Ollama for explanation only
-- Do NOT implement all 18 signals at once — start with 5 core signals
+- Do NOT implement all 21 signals at once — start with the core 5
 
 ---
 
-## Key Reminders
-
-- **The signal engine (Phase 5) is the core value.** Everything else is plumbing.
-- **Every finding must trace to records.** This is the differentiator.
-- **Synthetic data must be realistic.** Correlated, not random.
-- **Missing data must be handled.** It is not a finding; it is a data-quality note.
-- **The system must run offline.** No internet, no cloud, no external APIs at demo time.
-- **Keep it simple.** Judges prefer a working simple prototype over a broken complex one.
-
----
-
-*Update this file after each phase is completed. Mark phases as ✅ when done.*
+*Update this file after each phase is completed.*

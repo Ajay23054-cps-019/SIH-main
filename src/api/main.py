@@ -1,70 +1,69 @@
-"""FastAPI application factory for SAT-SA.
-
-Run against the demo database with:
-
-    uvicorn src.api.main:app --reload
-    # Swagger UI at http://localhost:8000/docs
-
-The app is a read-mostly window over the SQLite store the analytics
-pipeline writes; POST /api/analytics/run triggers that same pipeline.
-"""
-from __future__ import annotations
-
-import os
 from pathlib import Path
 from typing import Optional, Union
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.errors import install_error_handlers
-from src.api.middleware import install_middleware
-from src.api.routes import VERSION, router
-
-DEFAULT_DB = Path("data/sat_sa.db")
-
-DESCRIPTION = """
-Supervisory Analytics Tool for SOC Assessment (SAT-SA) — NCIIPC examiner tooling.
-
-All findings are framed as **potential supervisory concerns**, never
-determinations of non-compliance. The attention ranking is a review
-prioritization heuristic — **not** a risk or compliance score.
-"""
+from src.api.models import envelope
+from src.api.routes import router
+from src.dashboard.routes import router as dashboard_router
 
 
-def create_app(db_path: Union[str, Path, None] = None) -> FastAPI:
-    """Build the app; ``db_path`` (or env SAT_SA_DB) selects the store."""
-    resolved = Path(
-        db_path
-        or os.environ.get("SAT_SA_DB")
-        or DEFAULT_DB
-    )
+def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
     app = FastAPI(
-        title="SAT-SA Supervisory Analytics API",
-        version=VERSION,
-        description=DESCRIPTION,
+        title="SAT-SA",
+        description="Supervisory Analytics Tool for SOC Assessment",
+        version="0.1.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
     )
-    app.state.db_path = resolved
-    install_middleware(app)
+
+    if db_path is not None:
+        app.state.db_path = str(db_path)
+
     install_error_handlers(app)
-    app.include_router(router)
 
-    # Examiner dashboard (Phase 11): server-rendered shells + static assets.
-    from src.dashboard.routes import STATIC_DIR, router as dashboard_router
-
-    app.include_router(dashboard_router)
-    app.mount("/dashboard/static", StaticFiles(directory=STATIC_DIR),
-              name="dashboard_static")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health", tags=["system"])
-    def root_health():
-        from src.api.models import envelope
-        from src.storage.db import table_counts
+    def health():
+        data = {"status": "ok", "version": "0.1.0", "service": "SAT-SA"}
+        if db_path is not None:
+            try:
+                from src.storage.db import table_counts
+                data["table_counts"] = table_counts(db_path)
+            except Exception:
+                data["table_counts"] = {}
+        return JSONResponse(envelope(data=data))
 
-        return envelope({
-            "status": "ok", "version": VERSION, "database": str(resolved),
-            "table_counts": table_counts(resolved),
-        })
+    @app.get("/", tags=["system"])
+    def root():
+        return JSONResponse(envelope(data={
+            "name": "SAT-SA",
+            "version": "0.1.0",
+            "description": "Supervisory Analytics Tool for SOC Assessment",
+            "docs": "/docs",
+            "health": "/health",
+        }))
+
+    api_router = router
+    app.include_router(api_router)
+
+    dashboard_dir = Path(__file__).resolve().parent.parent / "dashboard"
+    static_dir = dashboard_dir / "static"
+    if static_dir.exists():
+        app.mount("/dashboard/static", StaticFiles(directory=str(static_dir)), name="dashboard-static")
+
+    app.include_router(dashboard_router)
 
     return app
 
