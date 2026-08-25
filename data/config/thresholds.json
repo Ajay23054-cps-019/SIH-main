@@ -36,6 +36,13 @@
     "min_decline_frac": 0.3,
     "decline_bound": 0.7
   },
+  "kpi_divergence": {
+    "min_quarters": 3,
+    "min_depth_decline": 0.3,
+    "depth_decline_bound": 1.2,
+    "min_velocity_improvement": 0.25,
+    "velocity_bound": 0.45
+  },
   "severity_mismatch": {
     "max_triage_only_rate": 0.7,
     "min_high_sev_closed": 10,

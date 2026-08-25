@@ -320,12 +320,94 @@ def _series_quality_notes(series) -> List[str]:
     return [f"Missing depth metric for {p}" for p in gaps]
 
 
+# ---------------------------------------------------------------------------
+# 6. kpi_divergence
+# ---------------------------------------------------------------------------
+
+
+def _quarterly_slope(ctx: SignalContext, metric: str
+                     ) -> Optional[tuple[List[tuple[str, float]], float]]:
+    """(non-empty quarterly series, linear slope) or None if too sparse."""
+    periods = ctx.quarter_periods()
+    series = [(p, ctx.metric(metric, p)) for p in periods]
+    series = [(p, v) for p, v in series if v is not None]
+    if not series:
+        return None
+    slope = float(np.polyfit(range(len(series)), [v for _, v in series], 1)[0])
+    return series, slope
+
+
+def detect_kpi_divergence(ctx: SignalContext) -> Optional[Finding]:
+    """Reported-metric improvement while underlying quality declines.
+
+    The metric-gaming pattern: closure velocity (the number that looks good
+    on management dashboards) improves quarter over quarter while
+    investigation depth — the work behind it — declines over the same
+    window. Both legs must clear their own slope threshold; severity and
+    confidence come from the *weaker* leg (conservative joint strength).
+    """
+    t = ctx.thresholds["kpi_divergence"]
+    depth = _quarterly_slope(ctx, "inv_depth_mean")
+    velocity = _quarterly_slope(ctx, "closure_velocity_median_h")
+    if depth is None or velocity is None:
+        return None
+    depth_series, depth_slope = depth
+    vel_series, vel_slope = velocity
+    if len(depth_series) < t["min_quarters"] or \
+            len(vel_series) < t["min_quarters"]:
+        return None
+    if depth_slope >= 0 or vel_slope >= 0:
+        return None          # divergence needs depth falling AND speed rising
+
+    depth_margin = margin_above(-depth_slope, t["min_depth_decline"],
+                                t["depth_decline_bound"])
+    vel_margin = margin_above(-vel_slope, t["min_velocity_improvement"],
+                              t["velocity_bound"])
+    margin = min(depth_margin, vel_margin)
+    if margin <= 0:
+        return None          # at least one leg below its threshold
+
+    d_first, d_last = depth_series[0][1], depth_series[-1][1]
+    v_first, v_last = vel_series[0][1], vel_series[-1][1]
+    f = _finding(
+        ctx, "kpi_divergence", depth_series[-1][0],
+        evidence={
+            "depth_by_quarter": {p: v for p, v in depth_series},
+            "velocity_by_quarter": {p: v for p, v in vel_series},
+            "depth_slope_per_quarter": round(depth_slope, 4),
+            "velocity_slope_per_quarter": round(vel_slope, 4),
+            "thresholds": {"min_depth_decline": t["min_depth_decline"],
+                           "min_velocity_improvement":
+                               t["min_velocity_improvement"]},
+        },
+        logic=(
+            f"Closure time improved {v_first:.2f}h to {v_last:.2f}h "
+            f"(slope {vel_slope:+.2f} h/quarter) while investigation depth "
+            f"fell {d_first:.2f} to {d_last:.2f} entries "
+            f"(slope {depth_slope:+.2f}/quarter): reported speed improving "
+            "as review depth drains — possible metric-gaming pattern."
+        ),
+        confidence=combined_confidence(
+            sample_confidence(len(depth_series), 4), margin),
+        actions=[
+            "Request closure-time reports and investigation case files "
+            "for the same period and read them together",
+            "Ask whether closure-time targets changed during the year",
+            "Compare examiner workload per closed alert, first vs last quarter",
+        ],
+        quality_notes=_series_quality_notes(depth_series),
+    )
+    f.severity = severity_from(margin)
+    return f
+
+
 SIGNALS = [
     ("superficial_closure", detect_superficial_closure),
     ("escalation_without_action", detect_escalation_without_action),
     ("quality_degradation", detect_quality_degradation),
     ("severity_mismatch", detect_severity_mismatch),
     ("template_investigation", detect_template_investigation),
+    ("kpi_divergence", detect_kpi_divergence),
 ]
 
 

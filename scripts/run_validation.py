@@ -27,6 +27,7 @@ coverage >= 0.70, precision >= 0.60, fp rate < 0.40, alignment >= 0.70.
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -111,6 +112,10 @@ def compute_metrics(test_cases: List[Dict[str, Any]],
               if c in by_case else 0.0 for c in ids]
     actual = [priorities[c] for c in ids]
     alignment = float(spearmanr(actual, oracle).statistic)
+    if math.isnan(alignment):
+        # Constant input (e.g. all priorities equal) has no rank ordering to
+        # correlate — score it as no demonstrated alignment, not a crash.
+        alignment = 0.0
 
     return {
         "coverage": coverage,

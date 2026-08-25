@@ -196,6 +196,7 @@ async function loadFindings(cseId) {
     if (!rows.length) {
       list.innerHTML = '<li class="muted">No signals fired for this CSE in ' +
         "the current run.</li>";
+      setActions([], "No signals fired — nothing to act on this cycle.");
       return;
     }
     list.innerHTML = rows.map(function (f) {
@@ -208,9 +209,29 @@ async function loadFindings(cseId) {
         (f.recommended_actions && f.recommended_actions.length
           ? actionsHtml(f) : "") + "</li>";
     }).join("");
+    // Consolidated examiner actions across this CSE's findings (deduped,
+    // most serious finding first — rows arrive severity-sorted).
+    const seen = {};
+    const consolidated = [];
+    rows.forEach(function (f) {
+      (f.recommended_actions || []).forEach(function (a) {
+        if (!seen[a]) { seen[a] = true; consolidated.push(a); }
+      });
+    });
+    setActions(consolidated);
   } catch (err) {
     setError(list, err.message);
   }
+}
+
+function setActions(actions, emptyMessage) {
+  const el = document.getElementById("actions-list");
+  if (!el) return;
+  el.innerHTML = actions.length
+    ? actions.map(function (a) {
+        return "<li>" + escapeHtml(a) + "</li>"; }).join("")
+    : '<li class="muted">' +
+      escapeHtml(emptyMessage || "None recorded.") + "</li>";
 }
 
 const PEER_CHART_METRIC = "inv_depth_mean";
@@ -364,11 +385,7 @@ async function loadFinding(findingId) {
     }
 
     // Recommended examiner actions
-    const actions = document.getElementById("actions-list");
-    actions.innerHTML = (f.recommended_actions || []).length
-      ? (f.recommended_actions || []).map(function (a) {
-          return "<li>" + escapeHtml(a) + "</li>"; }).join("")
-      : '<li class="muted">None recorded.</li>';
+    setActions(f.recommended_actions || []);
 
     // Optional LLM narrative — always clearly labeled when present.
     if (body.data.narrative) {

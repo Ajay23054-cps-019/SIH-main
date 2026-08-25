@@ -109,6 +109,19 @@ class TestComputeMetrics:
         assert m["high_findings_on_clean"] == 0
         assert len(m["informational_on_clean"]) == 1
 
+    def test_constant_priorities_score_zero_alignment_not_nan(self):
+        from scripts.run_validation import compute_metrics
+
+        oracle = _oracle()
+        findings = [_f(tc["cse_id"], sig, confidence=1.0)
+                    for tc in oracle for sig in tc["expected_signals"]]
+        # Every CSE at the same priority: Spearman is undefined (NaN) — the
+        # harness must degrade to 0.0 ("no demonstrated alignment").
+        priorities = {tc["cse_id"]: 42.0 for tc in oracle}
+        m = compute_metrics(oracle, findings, priorities,
+                            n_cses_total=len(oracle))
+        assert m["examiner_alignment"] == 0.0
+
 
 class TestTargets:
     def test_targets_met_requires_all_four(self):

@@ -39,11 +39,14 @@ Everything runs locally — no internet needed at any point.
 
 > "Investigation depth fell from **4.8 evidence entries per investigation**
 > in Q1 to **1.5 in Q4** — a 69% decline, slope −1.24 per quarter. Same
-> period, closures got *faster*. Closing faster while investigating less is
-> the classic execution gap: activity looks healthy, quality is draining."
+> period, closures got *faster* — 2.6 hours down to 1.3. SAT-SA has a named
+> signal for exactly this pairing: **kpi_divergence**. Reported speed
+> improving while review depth drains is the metric-gaming pattern — the
+> thing a KPI dashboard can never see about itself."
 
 **Screen:** Entity view profile cards + findings list. Click
-`quality_degradation` → finding view.
+`quality_degradation` → finding view (mention `kpi_divergence` in the
+findings list as you pass it).
 
 ## [0:50–1:10] Evidence drill-down
 

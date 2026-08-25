@@ -13,7 +13,7 @@ Dataset: `data/samples/demo_dataset` · ground truth: `scripts/design_test_cases
 | False-positive rate | HIGH findings on clean CSEs / total | 0% | < 40% | PASS |
 | Examiner alignment | Spearman(priority, oracle order), n=8 + clean | 0.909 | >= 0.70 | PASS |
 
-Secondary framing — precision counting every finding on a seeded CSE as true: **92%** (both framings exceed target; definitions differ only in how corroborating signals on already-flagged CSEs are treated).
+Secondary framing — precision counting every finding on a seeded CSE as true: **93%** (both framings exceed target; definitions differ only in how corroborating signals on already-flagged CSEs are treated).
 
 ## Case-by-case results
 
@@ -23,7 +23,7 @@ Investigation depth declines quarter over quarter (quality degradation with temp
 
 - ✅ `quality_degradation` fired (confidence 0.990)
 - ✅ `temporal_drift` fired (confidence 0.935)
-- ℹ️ additional signals: `closure_velocity_outlier`, `investigation_depth_outlier`, `superficial_closure` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `closure_velocity_outlier`, `investigation_depth_outlier`, `kpi_divergence`, `superficial_closure` (corroborating; not required by the oracle)
 
 ### CSE-017 — superficial_closures [PASS]
 
@@ -72,7 +72,7 @@ Combined weak SOC: shallow depth far below peers
 
 ## Portfolio-level observations
 
-- 26 findings across the portfolio (19 HIGH, 3 LOW, 4 MEDIUM).
+- 27 findings across the portfolio (20 HIGH, 3 LOW, 4 MEDIUM).
 - HIGH-severity findings on non-seeded CSEs: **0**.
 - LOW/MEDIUM informational findings on clean CSEs: **2** — isolated metric tails reviewed during tuning: `investigation_depth_outlier` on CSE-024; `closure_velocity_outlier` on CSE-032.
 

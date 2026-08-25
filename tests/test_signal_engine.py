@@ -216,6 +216,88 @@ class TestQualityDegradation:
         assert eg.detect_quality_degradation(_ctx(profiles=profiles)) is None
 
 
+class TestKpiDivergence:
+    """KPI improves while underlying quality declines (metric-gaming)."""
+
+    def test_divergence_fires_high(self):
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0 - 1.0 * (i - 1),
+                             closure_velocity_median_h=3.0 - 0.5 * (i - 1))
+                    for i in range(1, 5)]
+        f = eg.detect_kpi_divergence(_ctx(profiles=profiles))
+        assert f is not None
+        assert f.signal_category == "execution_gap"
+        assert f.period == "2024-Q4"
+        assert f.severity == "HIGH"
+        assert f.evidence["depth_slope_per_quarter"] == pytest.approx(-1.0)
+        assert f.evidence["velocity_slope_per_quarter"] == \
+            pytest.approx(-0.5)
+        assert "metric-gaming" in f.detection_logic
+        assert f.recommended_actions
+
+    def test_depth_declines_but_kpi_not_improving_silent(self):
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0 - 1.0 * (i - 1),
+                             closure_velocity_median_h=2.0)
+                    for i in range(1, 5)]
+        assert eg.detect_kpi_divergence(_ctx(profiles=profiles)) is None
+
+    def test_kpi_improves_but_depth_stable_silent(self):
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0,
+                             closure_velocity_median_h=3.0 - 0.5 * (i - 1))
+                    for i in range(1, 5)]
+        assert eg.detect_kpi_divergence(_ctx(profiles=profiles)) is None
+
+    def test_both_improving_silent(self):
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=4.0 + 0.5 * (i - 1),
+                             closure_velocity_median_h=3.0 - 0.5 * (i - 1))
+                    for i in range(1, 5)]
+        assert eg.detect_kpi_divergence(_ctx(profiles=profiles)) is None
+
+    def test_below_threshold_magnitudes_silent(self):
+        # both legs move the "right" way but inside clean-portfolio noise
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0 - 0.2 * (i - 1),
+                             closure_velocity_median_h=3.0 - 0.1 * (i - 1))
+                    for i in range(1, 5)]
+        assert eg.detect_kpi_divergence(_ctx(profiles=profiles)) is None
+
+    def test_too_few_quarters_silent(self):
+        profiles = [_profile(period="2024-Q1", inv_depth_mean=5.0,
+                             closure_velocity_median_h=3.0),
+                    _profile(period="2024-Q2", inv_depth_mean=2.0,
+                             closure_velocity_median_h=1.0)]
+        assert eg.detect_kpi_divergence(_ctx(profiles=profiles)) is None
+
+    def test_severity_from_weaker_leg(self):
+        # strong depth decline, barely-over-threshold velocity gain
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0 - 1.0 * (i - 1),
+                             closure_velocity_median_h=3.0 - 0.26 * (i - 1))
+                    for i in range(1, 5)]
+        f = eg.detect_kpi_divergence(_ctx(profiles=profiles))
+        assert f is not None
+        assert f.severity == "LOW"          # weaker leg keeps it conservative
+        assert f.confidence < 0.8
+
+    def test_threshold_override_loosens(self, tmp_path):
+        cfg = load_thresholds()
+        cfg["kpi_divergence"].update({"min_depth_decline": 0.10,
+                                      "min_velocity_improvement": 0.05})
+        profiles = [_profile(period=f"2024-Q{i}",
+                             inv_depth_mean=5.0 - 0.2 * (i - 1),
+                             closure_velocity_median_h=3.0 - 0.1 * (i - 1))
+                    for i in range(1, 5)]
+        f = eg.detect_kpi_divergence(_ctx(profiles=profiles,
+                                          thresholds=cfg))
+        assert f is not None and f.severity == "LOW"
+
+    def test_registered_as_execution_gap(self):
+        assert SIGNAL_REGISTRY["kpi_divergence"][0] == "execution_gap"
+
+
 class TestTemplateInvestigation:
     def test_templated_notes_fire(self):
         inv = _inv_rows([
@@ -531,8 +613,8 @@ class TestPeerDeviation:
 
 
 class TestEngineMechanics:
-    def test_registry_has_18_signals_in_four_categories(self):
-        assert len(SIGNAL_REGISTRY) == 18
+    def test_registry_has_19_signals_in_four_categories(self):
+        assert len(SIGNAL_REGISTRY) == 19
         cats = {cat for cat, _ in SIGNAL_REGISTRY.values()}
         assert cats == {"execution_gap", "negative_space",
                         "behavioral_anomaly", "peer_deviation"}

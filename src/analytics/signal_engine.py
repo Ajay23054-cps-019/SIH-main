@@ -41,8 +41,8 @@ for _cat, _mod in CATEGORY_MODULES.items():
     for _name, _fn in _mod.SIGNALS:
         SIGNAL_REGISTRY[_name] = (_cat, _fn)
 
-assert len(SIGNAL_REGISTRY) == 18, \
-    f"expected 18 registered signals, found {len(SIGNAL_REGISTRY)}"
+assert len(SIGNAL_REGISTRY) == 19, \
+    f"expected 19 registered signals, found {len(SIGNAL_REGISTRY)}"
 
 FINDINGS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS findings (

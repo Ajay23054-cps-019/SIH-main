@@ -157,6 +157,13 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
         "min_decline_frac": 0.30,      # first->last depth drop fraction
         "decline_bound": 0.70,
     },
+    "kpi_divergence": {
+        "min_quarters": 3,
+        "min_depth_decline": 0.30,     # depth entries lost per quarter
+        "depth_decline_bound": 1.20,   # slope magnitude that saturates margin
+        "min_velocity_improvement": 0.25,  # h/quarter of faster closures
+        "velocity_bound": 0.45,
+    },
     "severity_mismatch": {
         "max_triage_only_rate": 0.70,  # closed high-sev w/o investigation
         "min_high_sev_closed": 10,
