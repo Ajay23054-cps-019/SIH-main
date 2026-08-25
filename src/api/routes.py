@@ -28,6 +28,7 @@ from src.api.models import (
     CATEGORY_SLUGS,
     METRIC_ALIASES,
     AnalyticsRunRequest,
+    FeedbackRequest,
     envelope,
     utc_now,
 )
@@ -308,6 +309,83 @@ def finding_detail(finding_id: str, db_path: Path = Depends(get_db_path)):
     chain = EvidenceTracer(db_path).trace(finding_id)
     return envelope({"finding": matches[0].to_dict(),
                      "chain": _chain_to_dict(chain) if chain else None})
+
+
+# ---------------------------------------------------------------------------
+# Examiner feedback loop
+# ---------------------------------------------------------------------------
+
+
+@router.get("/feedback/summary")
+def feedback_summary(db_path: Path = Depends(get_db_path)):
+    """Per-signal-type disposition tallies + advisory calibration text."""
+    from src.feedback import calibration_summary, load_feedback
+
+    rows = calibration_summary(_findings(db_path), load_feedback(db_path),
+                               load_thresholds())
+    return envelope(rows, meta={
+        "count": len(rows),
+        "note": ("Advisory only — recommendations are applied by a human "
+                 "via data/config/thresholds.json, never automatically.")})
+
+
+@router.get("/findings/{finding_id}/feedback")
+def feedback_get(finding_id: str, db_path: Path = Depends(get_db_path)):
+    from src.feedback import load_feedback
+
+    rows = load_feedback(db_path, finding_id=finding_id)
+    return envelope(rows[0] if rows else None)
+
+
+@router.post("/findings/{finding_id}/feedback")
+def feedback_post(finding_id: str, body: FeedbackRequest,
+                  db_path: Path = Depends(get_db_path)):
+    """Record an examiner disposition (worthwhile / not_worthwhile / uncertain)."""
+    from src.feedback import DISPOSITIONS, load_feedback, store_feedback
+
+    if body.disposition not in DISPOSITIONS:
+        raise NotFound(
+            f"disposition must be one of {', '.join(DISPOSITIONS)}",
+            status_code=422, code="bad_disposition")
+    if not _findings(db_path, finding_id=finding_id):
+        raise NotFound(f"no finding '{finding_id}'")
+    row = store_feedback(db_path, finding_id, body.disposition,
+                         examiner=body.examiner, note=body.note)
+    return envelope(row)
+
+
+# ---------------------------------------------------------------------------
+# Supervisory cases (signal fusion)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/cases")
+def cases_list(cse_id: Optional[str] = None,
+               db_path: Path = Depends(get_db_path)):
+    from src.analytics.fusion import load_cases
+
+    rows = load_cases(db_path, cse_id=cse_id)
+    return envelope(rows, meta={
+        "count": len(rows),
+        "disclaimer": ("Supervisory cases aggregate potential concerns for "
+                       "review ordering; not a compliance determination.")})
+
+
+@router.get("/cases/{case_id}")
+def case_detail(case_id: str, db_path: Path = Depends(get_db_path)):
+    from src.analytics.fusion import load_cases
+
+    matches = [c for c in load_cases(db_path) if c["case_id"] == case_id]
+    if not matches:
+        raise NotFound(f"no supervisory case '{case_id}'")
+    case = matches[0]
+    member_ids = set(case["finding_ids"])
+    members = sorted(
+        (_finding_dict(f) for f in _findings(db_path, cse_id=case["cse_id"])
+         if f.finding_id in member_ids),
+        key=lambda d: (-{"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+                       .get(d["severity"], 0), -d["confidence"]))
+    return envelope({"case": case, "member_findings": members})
 
 
 # ---------------------------------------------------------------------------

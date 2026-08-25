@@ -1,7 +1,7 @@
 """Tests for the supervisory signal engine.
 
 Unit tests drive individual signals through handcrafted SignalContexts so
-threshold logic is pinned exactly. Integration tests run the full 18-signal
+threshold logic is pinned exactly. Integration tests run the full registered
 engine over the demo dataset and assert every seeded weakness is detected —
 plus that no *clean* CSE earns a HIGH-severity finding.
 """
@@ -465,6 +465,88 @@ class TestTemporalDrift:
             ("2024-Q2", "2024-Q3")
 
 
+class TestChangepointDrift:
+    """Single change-point search names the quarter a decline began."""
+
+    def _step_profiles(self, values):
+        return [_profile(period=f"2024-Q{i + 1}", inv_depth_mean=v)
+                for i, v in enumerate(values)]
+
+    def test_step_decline_fires_high_and_names_quarter(self):
+        profiles = self._step_profiles([5.0, 5.0, 2.0, 2.0])
+        f = ba.detect_changepoint_drift(_ctx(profiles=profiles))
+        assert f is not None
+        assert f.signal_category == "behavioral_anomaly"
+        assert f.period == "2024-Q3"          # first post-change quarter
+        assert f.severity == "HIGH"
+        assert f.evidence["change_index"] == 2
+        assert f.evidence["mean_before"] == pytest.approx(5.0)
+        assert f.evidence["mean_after"] == pytest.approx(2.0)
+        assert f.evidence["explained_share"] == pytest.approx(1.0)
+        assert f.evidence["drop"] == pytest.approx(3.0)
+        assert "start date" in f.detection_logic
+        assert f.recommended_actions
+
+    def test_gradual_decline_silent(self):
+        # slow drift is quality_degradation's job, not a step change
+        profiles = self._step_profiles([5.0, 4.9, 4.8, 4.7])
+        assert ba.detect_changepoint_drift(_ctx(profiles=profiles)) is None
+
+    def test_improving_level_silent(self):
+        profiles = self._step_profiles([2.0, 2.0, 5.0, 5.0])
+        assert ba.detect_changepoint_drift(_ctx(profiles=profiles)) is None
+
+    def test_below_threshold_magnitudes_silent(self):
+        # 0.8-entry step sits inside clean-portfolio noise (max 0.47)
+        profiles = self._step_profiles([5.0, 5.0, 4.2, 4.2])
+        assert ba.detect_changepoint_drift(_ctx(profiles=profiles)) is None
+
+    def test_too_few_quarters_silent(self):
+        profiles = self._step_profiles([5.0, 2.0])
+        assert ba.detect_changepoint_drift(_ctx(profiles=profiles)) is None
+        assert ba.detect_changepoint_drift(_ctx()) is None
+
+    def test_single_quarter_spikes_are_not_onsets(self):
+        # one elevated/recovered quarter at the window edge is a blip, not a
+        # sustained regime change: the two-level model explains too little
+        assert ba.detect_changepoint_drift(
+            _ctx(profiles=self._step_profiles([9.0, 5.0, 5.0, 5.0]))) is None
+        assert ba.detect_changepoint_drift(
+            _ctx(profiles=self._step_profiles([5.0, 5.0, 5.0, 1.0]))) is None
+
+    def test_nan_metrics_are_filtered_not_propagated(self):
+        profiles = self._step_profiles([5.0, 5.0, 2.0, 2.0])
+        profiles[1].metrics["inv_depth_mean"] = float("nan")
+        f = ba.detect_changepoint_drift(_ctx(profiles=profiles))
+        # 3 usable quarters < min_points -> silent, never NaN evidence
+        assert f is None
+
+    def test_degenerate_min_points_override_stays_silent(self):
+        cfg = load_thresholds()
+        cfg["changepoint_drift"]["min_points"] = 1
+        assert ba.detect_changepoint_drift(_ctx(
+            profiles=self._step_profiles([5.0]), thresholds=cfg)) is None
+
+    def test_severity_from_weaker_leg(self):
+        # drop clears its gate comfortably; relative decline barely does
+        profiles = self._step_profiles([5.0, 5.0, 2.9, 2.9])
+        f = ba.detect_changepoint_drift(_ctx(profiles=profiles))
+        assert f is not None
+        assert f.severity == "MEDIUM"       # weaker (frac) leg is conservative
+        assert f.confidence == pytest.approx(0.72)
+
+    def test_threshold_override_loosens(self):
+        cfg = load_thresholds()
+        cfg["changepoint_drift"].update({"min_drop": 0.5, "min_drop_frac": 0.1})
+        profiles = self._step_profiles([5.0, 5.0, 4.2, 4.2])
+        f = ba.detect_changepoint_drift(_ctx(profiles=profiles,
+                                             thresholds=cfg))
+        assert f is not None and f.severity == "LOW"
+
+    def test_registered_as_behavioral_anomaly(self):
+        assert SIGNAL_REGISTRY["changepoint_drift"][0] == "behavioral_anomaly"
+
+
 class TestQuietPeriod:
     def test_blackout_gap_fires(self):
         prof = _profile(period=PERIOD_ALL, max_gap_hours=200.0,
@@ -613,8 +695,8 @@ class TestPeerDeviation:
 
 
 class TestEngineMechanics:
-    def test_registry_has_19_signals_in_four_categories(self):
-        assert len(SIGNAL_REGISTRY) == 19
+    def test_registry_has_20_signals_in_four_categories(self):
+        assert len(SIGNAL_REGISTRY) == 20
         cats = {cat for cat, _ in SIGNAL_REGISTRY.values()}
         assert cats == {"execution_gap", "negative_space",
                         "behavioral_anomaly", "peer_deviation"}

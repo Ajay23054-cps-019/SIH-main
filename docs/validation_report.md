@@ -23,7 +23,7 @@ Investigation depth declines quarter over quarter (quality degradation with temp
 
 - ✅ `quality_degradation` fired (confidence 0.990)
 - ✅ `temporal_drift` fired (confidence 0.935)
-- ℹ️ additional signals: `closure_velocity_outlier`, `investigation_depth_outlier`, `kpi_divergence`, `superficial_closure` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `changepoint_drift`, `closure_velocity_outlier`, `investigation_depth_outlier`, `kpi_divergence`, `superficial_closure` (corroborating; not required by the oracle)
 
 ### CSE-017 — superficial_closures [PASS]
 
@@ -72,7 +72,7 @@ Combined weak SOC: shallow depth far below peers
 
 ## Portfolio-level observations
 
-- 27 findings across the portfolio (20 HIGH, 3 LOW, 4 MEDIUM).
+- 28 findings across the portfolio (21 HIGH, 3 LOW, 4 MEDIUM).
 - HIGH-severity findings on non-seeded CSEs: **0**.
 - LOW/MEDIUM informational findings on clean CSEs: **2** — isolated metric tails reviewed during tuning: `investigation_depth_outlier` on CSE-024; `closure_velocity_outlier` on CSE-032.
 

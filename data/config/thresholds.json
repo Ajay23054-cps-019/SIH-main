@@ -20,6 +20,15 @@
     "max_diversity_categories": 4,
     "scale": 100
   },
+  "fusion": {
+    "min_findings": 2,
+    "min_categories": 2
+  },
+  "feedback": {
+    "min_feedback": 5,
+    "low_worthwhile_rate": 0.3,
+    "high_worthwhile_rate": 0.85
+  },
   "superficial_closure": {
     "max_closure_hours": 2.0,
     "shallow_depth_max": 2.0,
@@ -78,6 +87,15 @@
   "temporal_drift": {
     "depth_drop_frac": 0.4,
     "velocity_jump_factor": 2.5
+  },
+  "changepoint_drift": {
+    "min_points": 4,
+    "min_segment": 2,
+    "min_drop": 0.9,
+    "drop_bound": 3.0,
+    "min_drop_frac": 0.2,
+    "frac_bound": 0.7,
+    "min_explained_share": 0.6
   },
   "unusual_quiet_period": {
     "min_quiet_periods": 18,

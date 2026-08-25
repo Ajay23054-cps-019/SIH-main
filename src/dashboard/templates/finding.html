@@ -46,4 +46,20 @@
   <h2>Recommended Examiner Actions</h2>
   <ul id="actions-list"><li class="loading">Loading&hellip;</li></ul>
 </section>
+
+<section class="panel" id="feedback-panel">
+  <h2>Examiner Feedback</h2>
+  <p class="muted">Was working this finding worth the examiner's time? Your
+    disposition is stored locally and feeds advisory threshold calibration —
+    it never alters stored analytics.</p>
+  <div class="feedback-buttons" id="feedback-buttons">
+    <button class="fb-btn" data-disposition="worthwhile"
+            type="button">Worthwhile</button>
+    <button class="fb-btn" data-disposition="not_worthwhile"
+            type="button">Not worthwhile</button>
+    <button class="fb-btn" data-disposition="uncertain"
+            type="button">Uncertain</button>
+  </div>
+  <p id="feedback-state" class="muted"></p>
+</section>
 {% endblock %}

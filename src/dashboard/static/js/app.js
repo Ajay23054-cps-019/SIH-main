@@ -17,8 +17,8 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-async function fetchJSON(url) {
-  const resp = await fetch(url);
+async function fetchJSON(url, options) {
+  const resp = await fetch(url, options);
   let body = null;
   try { body = await resp.json(); } catch (err) { /* non-JSON */ }
   if (!resp.ok) {
@@ -143,9 +143,39 @@ async function renderRankings() {
 
 function initEntity(cseId) {
   document.getElementById("entity-title").textContent = cseId;
+  loadCase(cseId);
   loadProfile(cseId);
   loadFindings(cseId);
   loadPeers(cseId);
+}
+
+// Fused supervisory case (signal fusion): shown only when this CSE's
+// findings cleared the fusion gates in the last pipeline run.
+async function loadCase(cseId) {
+  const el = document.getElementById("case-banner");
+  if (!el) return;
+  try {
+    const body = await fetchJSON("/api/cases?cse_id=" +
+      encodeURIComponent(cseId));
+    if (!body.data.length) { el.hidden = true; return; }
+    const c = body.data[0];
+    const members = c.finding_ids.map(function (fid) {
+      const sig = fid.split(":")[1] || fid;
+      return '<a class="case-member" href="/dashboard/finding/' +
+        encodeURIComponent(fid) + '"><code>' + escapeHtml(sig) +
+        "</code></a>";
+    }).join(" ");
+    el.innerHTML =
+      "<h2>Supervisory Case <code>" + escapeHtml(c.case_id) + "</code> " +
+      sevBadge(c.severity) + " <span class=\"finding-meta\">joint " +
+      "confidence " + fmtNumber(c.joint_confidence) + " &middot; " +
+      escapeHtml(String(c.n_findings)) + " findings</span></h2>" +
+      '<p class="case-narrative">' + escapeHtml(c.narrative) + "</p>" +
+      '<p class="case-members">Member findings: ' + members + "</p>" +
+      '<p class="finding-meta">' + c.caveats.map(escapeHtml).join(" ") +
+      "</p>";
+    el.hidden = false;
+  } catch (err) { el.hidden = true; /* no cases table / no case */ }
 }
 
 async function loadProfile(cseId) {
@@ -300,6 +330,49 @@ async function loadPeers(cseId) {
 
 function initFinding(findingId) {
   loadFinding(findingId);
+  initFeedback(findingId);
+}
+
+// ------------------------------------------------------- examiner feedback
+
+function initFeedback(findingId) {
+  const buttons = document.querySelectorAll("#feedback-buttons .fb-btn");
+  const state = document.getElementById("feedback-state");
+  if (!buttons.length || !state) return;
+
+  async function refresh() {
+    try {
+      const body = await fetchJSON("/api/findings/" +
+        encodeURIComponent(findingId) + "/feedback");
+      const row = body.data;
+      buttons.forEach(function (b) {
+        b.classList.toggle("active",
+          !!row && b.dataset.disposition === row.disposition);
+      });
+      state.textContent = row
+        ? "Recorded: " + row.disposition + " (" + row.updated_at + ")" +
+          (row.examiner ? " — " + row.examiner : "")
+        : "No disposition recorded yet.";
+    } catch (err) {
+      state.textContent = "Feedback unavailable: " + err.message;
+    }
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener("click", async function () {
+      state.textContent = "Saving…";
+      try {
+        await fetchJSON("/api/findings/" +
+          encodeURIComponent(findingId) + "/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ disposition: b.dataset.disposition }),
+        });
+      } catch (err) { /* refresh() surfaces the failure */ }
+      refresh();
+    });
+  });
+  refresh();
 }
 
 function detailRow(record) {

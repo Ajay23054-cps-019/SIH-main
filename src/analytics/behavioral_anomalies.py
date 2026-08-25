@@ -1,6 +1,7 @@
 """Behavioral-anomaly signals: unusual temporal or operational patterns."""
 from __future__ import annotations
 
+import math
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -345,12 +346,118 @@ def detect_recurring_incident(ctx: SignalContext) -> Optional[Finding]:
     return f
 
 
+# ---------------------------------------------------------------------------
+# 16. changepoint_drift
+# ---------------------------------------------------------------------------
+
+
+def _best_single_changepoint(values: List[float], min_segment: int = 2
+                             ) -> Tuple[float, int, float, float, float]:
+    """Exhaustive single-change-point search (two-segment mean model).
+
+    Returns (sse_split, split_index, mean_before, mean_after, sse_flat).
+    Both segments must hold at least ``min_segment`` points, so the model
+    always describes a *sustained* level shift — never a single anomalous
+    quarter (that is temporal_drift's job). With the handful of quarterly
+    points a profile window holds, exhaustive search is exact, cheaper than
+    CUSUM approximations, and deterministic.
+    """
+    n = len(values)
+    flat_mean = sum(values) / n
+    sse_flat = sum((v - flat_mean) ** 2 for v in values)
+    best: Optional[Tuple[float, int, float, float]] = None
+    for k in range(min_segment, n - min_segment + 1):
+        pre, post = values[:k], values[k:]
+        m1 = sum(pre) / len(pre)
+        m2 = sum(post) / len(post)
+        sse = (sum((v - m1) ** 2 for v in pre)
+               + sum((v - m2) ** 2 for v in post))
+        if best is None or sse < best[0]:
+            best = (sse, k, m1, m2)
+    if best is None:                     # window too short for two segments
+        best = (sse_flat, 0, flat_mean, flat_mean)
+    return best + (sse_flat,)  # type: ignore[return-value]
+
+
+def detect_changepoint_drift(ctx: SignalContext) -> Optional[Finding]:
+    """Locates WHERE a quality decline began, not just THAT it declines.
+
+    Single change-point search on quarterly investigation depth: the split
+    that best separates a before/after level names the quarter the decline
+    started. Complements quality_degradation (overall trend) and
+    temporal_drift (single-quarter jump) with a dated onset. A split only
+    counts when both segments are sustained (``min_segment`` quarters each)
+    and the two-level model explains most of the window's variance
+    (``min_explained_share``) — one bad quarter is not a regime change.
+    """
+    t = ctx.thresholds["changepoint_drift"]
+    min_segment = int(t["min_segment"])
+    periods = ctx.quarter_periods()
+    series = [(p, ctx.metric("inv_depth_mean", p)) for p in periods]
+    series = [(p, v) for p, v in series
+              if v is not None and math.isfinite(v)]
+    if len(series) < max(int(t["min_points"]), 2 * min_segment):
+        return None
+    values = [v for _, v in series]
+    sse_split, k, m_pre, m_post, sse_flat = _best_single_changepoint(
+        values, min_segment)
+    drop = m_pre - m_post
+    drop_frac = drop / m_pre if m_pre > 0 else 0.0
+    if drop <= 0 or drop_frac < t["min_drop_frac"]:
+        return None
+    explained = 1 - sse_split / sse_flat if sse_flat > 0 else 0.0
+    if explained < t["min_explained_share"]:
+        return None          # an outlier quarter, not a level shift
+    margin = min(margin_above(drop, t["min_drop"], t["drop_bound"]),
+                 margin_above(drop_frac, t["min_drop_frac"], t["frac_bound"]))
+    if margin <= 0:
+        return None          # at least one leg below its threshold
+    change_quarter = series[k][0]
+    f = make_finding(
+        ctx, "changepoint_drift", change_quarter,
+        category=SIGNAL_CATEGORY,
+        evidence={
+            "depth_by_quarter": {p: v for p, v in series},
+            "change_quarter": change_quarter,
+            "change_index": k,
+            "mean_before": round(m_pre, 4),
+            "mean_after": round(m_post, 4),
+            "drop": round(drop, 4),
+            "drop_frac": round(drop_frac, 4),
+            "sse_split": round(sse_split, 4),
+            "sse_flat": round(sse_flat, 4),
+            "explained_share": round(explained, 4),
+            "thresholds": {"min_drop": t["min_drop"],
+                           "min_drop_frac": t["min_drop_frac"],
+                           "min_explained_share": t["min_explained_share"]},
+        },
+        logic=(
+            f"Quarterly investigation depth averages {m_pre:.2f} entries "
+            f"before {change_quarter} and {m_post:.2f} from that quarter on — "
+            f"a step decline of {drop:.2f} entries ({drop_frac:.0%}) located "
+            f"at {change_quarter} by single change-point search "
+            f"({explained:.0%} of level variance explained). The decline has "
+            "a start date; ask what changed in the SOC at that point."
+        ),
+        confidence=combined_confidence(sample_confidence(len(series), 4), margin),
+        actions=[
+            f"Ask what changed in the SOC in or just before {change_quarter}",
+            "Compare staffing, tooling and process changes against the "
+            "onset quarter",
+            "Sample case files from before and after the change point",
+        ],
+    )
+    f.severity = severity_from(margin)
+    return f
+
+
 SIGNALS = [
     ("temporal_drift", detect_temporal_drift),
     ("unusual_quiet_period", detect_unusual_quiet_period),
     ("bulk_closure_pattern", detect_bulk_closure_pattern),
     ("shift_variance", detect_shift_variance),
     ("recurring_incident", detect_recurring_incident),
+    ("changepoint_drift", detect_changepoint_drift),
 ]
 
 

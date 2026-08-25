@@ -178,6 +178,69 @@ SIGNAL_EVIDENCE_CALCULATIONS = {
     "ratio_observed_over_expected":
         lambda ev: ("observed alerts/day ÷ (peer median per-asset-day rate × "
                     "own asset count)"),
+    "observed_alerts_per_day":
+        lambda ev: "own alerts in the period ÷ days spanned by the period",
+    "expected_alerts_per_day":
+        lambda ev: (f"peer median per-asset-day rate "
+                    f"({ev.get('peer_median_density_per_asset')}) × own "
+                    f"asset count ({ev.get('n_assets')})"),
+    # --- temporal_drift ---
+    "value_from":
+        lambda ev: f"profiler metric '{ev.get('metric')}' in "
+                   f"{ev.get('from_period')}",
+    "value_to":
+        lambda ev: f"profiler metric '{ev.get('metric')}' in "
+                   f"{ev.get('to_period')}",
+    # --- unusual_quiet_period ---
+    "quiet_period_count":
+        lambda ev: "count of inter-alert gaps exceeding quiet_gap_hours",
+    "max_gap_hours":
+        lambda ev: "longest gap between consecutive alerts in the window",
+    "median_alert_gap_hours":
+        lambda ev: "median gap between consecutive alerts in the window",
+    # --- severity_mismatch ---
+    "triage_only_rate":
+        lambda ev: ("closed CRITICAL/HIGH alerts without an investigation ÷ "
+                    f"closed CRITICAL/HIGH alerts "
+                    f"({ev.get('n_without_investigation')}÷"
+                    f"{ev.get('n_high_sev_closed')})"),
+    # --- missing_alert_categories ---
+    "categories_expected_but_absent":
+        lambda ev: ("alert categories reported by ≥presence_frac of the "
+                    "peer group but absent from this CSE's submissions"),
+    # --- escalation_absence ---
+    "n_critical_alerts":
+        lambda ev: "count of CRITICAL-severity alerts in the window",
+    "n_weekend_critical_alerts":
+        lambda ev: "count of CRITICAL alerts opened on weekends (Sat/Sun)",
+    # --- recurring_incident ---
+    "occurrences":
+        lambda ev: (f"alerts of category '{ev.get('category')}' on asset "
+                    f"{ev.get('asset_id')} in the window"),
+    "unclosed_share":
+        "alerts of this (asset, category) still open ÷ all of them",
+    # --- kpi_divergence ---
+    "depth_slope_per_quarter":
+        lambda ev: "least-squares slope of quarterly inv_depth_mean vs "
+                   "quarter index",
+    "velocity_slope_per_quarter":
+        lambda ev: "least-squares slope of quarterly closure_velocity_median_h "
+                   "vs quarter index",
+    # --- changepoint_drift ---
+    "mean_before":
+        lambda ev: "mean quarterly inv_depth_mean over the quarters BEFORE "
+                   "the change point",
+    "mean_after":
+        lambda ev: "mean quarterly inv_depth_mean from the change point ONWARD",
+    "drop":
+        lambda ev: f"mean_before − mean_after "
+                   f"({ev.get('mean_before')} − {ev.get('mean_after')})",
+    "drop_frac":
+        lambda ev: f"drop ÷ mean_before "
+                   f"({ev.get('drop')} ÷ {ev.get('mean_before')})",
+    "explained_share":
+        lambda ev: f"1 − SSE(two-segment model) ÷ SSE(flat mean) "
+                   f"(SSEs {ev.get('sse_split')} vs {ev.get('sse_flat')})",
 }
 
 

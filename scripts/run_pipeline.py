@@ -78,16 +78,17 @@ def clear_derived(db_path: Path) -> None:
     from sqlalchemy import text
 
     from src.analytics.benchmarking import BENCHMARKS_TABLE_SQL
+    from src.analytics.fusion import CASES_TABLE_SQL
     from src.analytics.profiler import PROFILES_TABLE_SQL
     from src.analytics.scoring import SCORES_TABLE_SQL
     from src.storage.db import get_engine
 
     with get_engine(db_path).begin() as conn:
         for create_sql in (PROFILES_TABLE_SQL, BENCHMARKS_TABLE_SQL,
-                           SCORES_TABLE_SQL):
+                           SCORES_TABLE_SQL, CASES_TABLE_SQL):
             conn.execute(text(create_sql))
         for table in ("behavioral_profiles", "peer_benchmarks",
-                      "attention_scores"):
+                      "attention_scores", "supervisory_cases"):
             conn.execute(text(f"DELETE FROM {table}"))
 
 
@@ -145,6 +146,13 @@ def run_pipeline(db_path: Path = DEFAULT_DB,
     flagged = sorted({f.cse_id for f in findings})
     print(f"[signals] {len(findings)} findings across {len(flagged)} CSEs")
 
+    # 4.5 Fusion --------------------------------------------------------------
+    from src.analytics.fusion import fuse_cases, store_cases
+
+    cases = fuse_cases(findings, thresholds=thresholds)
+    store_cases(cases, db_path)
+    print(f"[fusion] {len(cases)} supervisory cases")
+
     # 5. Benchmarks ----------------------------------------------------------
     print("[peers] sector x size benchmarking ...")
     benches = build_all_benchmarks(profiles, frames["cse_metadata"],
@@ -197,7 +205,8 @@ def run_pipeline(db_path: Path = DEFAULT_DB,
         "db_path": str(db_path), "elapsed_s": round(elapsed, 1),
         "records": total_records, "quality": report.overall_score(),
         "profiles": len(profiles), "findings": len(findings),
-        "flagged_cses": len(flagged), "benchmark_rows": n_bench_rows,
+        "flagged_cses": len(flagged), "supervisory_cases": len(cases),
+        "benchmark_rows": n_bench_rows,
         "outlier_flags": n_outliers,
         "scores_stored": len(ranked),
         "checks": checks,

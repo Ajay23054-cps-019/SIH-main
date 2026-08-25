@@ -66,6 +66,24 @@ def live_server(tmp_path_factory):
         caveats=[STANDARD_CAVEAT],
     )], db_path)
 
+    # A second, different-category finding so the fusion layer forms a case
+    # for CSE-001 and the entity-page case banner has something to render.
+    store_findings([Finding(
+        finding_id="CSE-001:probe_negative_space", cse_id="CSE-001",
+        signal_type="probe_negative_space", signal_category="negative_space",
+        period="ALL", severity="MEDIUM", confidence=0.8,
+        evidence={"probe": True},
+        detection_logic="seeded for browser tests (fusion)",
+        caveats=[STANDARD_CAVEAT],
+    )], db_path)
+    from src.analytics.finding import load_thresholds
+    from src.analytics.fusion import fuse_cases, store_cases
+
+    from src.evidence.findings import load_findings_as_objects
+
+    store_cases(fuse_cases(load_findings_as_objects(db_path),
+                           load_thresholds()), db_path)
+
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
@@ -106,6 +124,15 @@ class TestClientSideRendering:
         segment = dom.split('id="m-inv_depth_mean"')[1][:40]
         value = segment.split(">")[1].split("<")[0]
         assert value not in ("–", "!", ""), "profile metrics did not render"
+
+    def test_entity_case_banner_renders(self, live_server):
+        """Two cross-category probe findings -> fusion case -> banner."""
+        dom = _render(live_server + "/dashboard/entity/CSE-001")
+        assert "Supervisory Case" in dom
+        assert "CASE-CSE-001" in dom
+        banner = dom.split('id="case-banner"')[1][:800]
+        assert "hidden" not in banner.split(">")[0], "banner never unhidden"
+        assert "probe_high" in banner            # member finding links render
 
     def test_finding_evidence_table_populated(self, live_server):
         dom = _render(live_server + "/dashboard/finding/" +

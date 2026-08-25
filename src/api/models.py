@@ -34,6 +34,14 @@ class AnalyticsRunRequest(BaseModel):
     include_scores: bool = True
 
 
+class FeedbackRequest(BaseModel):
+    """Body for POST /api/findings/{finding_id}/feedback."""
+    disposition: str = Field(
+        description="One of: worthwhile, not_worthwhile, uncertain")
+    examiner: Optional[str] = None
+    note: Optional[str] = None
+
+
 class JobStatus(BaseModel):
     job_id: str
     state: str                     # queued | running | done | failed

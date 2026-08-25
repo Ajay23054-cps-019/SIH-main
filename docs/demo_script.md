@@ -30,33 +30,38 @@ Everything runs locally — no internet needed at any point.
 > hour goes. The top of this queue is dominated by seeded weak SOCs our
 > team injected into the data beforehand.
 >
-> Number two is CSE-042 — five findings. Let's see why."
+> Number one is CSE-042 — seven findings, which the fusion layer has
+> combined into a single supervisory case. Let's see why."
 
-**Screen:** Point at the ranked table (CSE-031 #1 at 88.5, CSE-042 #2 at
-85.7). Click the **CSE-042** row → entity view.
+**Screen:** Point at the ranked table (CSE-042 #1 at 89.1, CSE-031 #2 at
+88.5). Click the **CSE-042** row → entity view.
 
 ## [0:30–0:50] Execution gap
 
 > "Investigation depth fell from **4.8 evidence entries per investigation**
-> in Q1 to **1.5 in Q4** — a 69% decline, slope −1.24 per quarter. Same
-> period, closures got *faster* — 2.6 hours down to 1.3. SAT-SA has a named
-> signal for exactly this pairing: **kpi_divergence**. Reported speed
-> improving while review depth drains is the metric-gaming pattern — the
-> thing a KPI dashboard can never see about itself."
+> in Q1 to **1.5 in Q4** — a 69% decline. Same period, closures got
+> *faster* — 2.6 hours down to 1.3. SAT-SA has a named signal for exactly
+> this pairing: **kpi_divergence**. Reported speed improving while review
+> depth drains is the metric-gaming pattern — the thing a KPI dashboard can
+> never see about itself. And a second signal dates the break: depth held
+> near **4.7 entries** through 2024-Q2, then stepped down to **1.9** —
+> the decline starts at **2024-Q3**. A decline with a start date is a
+> question you can ask: *what changed that quarter?*"
 
-**Screen:** Entity view profile cards + findings list. Click
-`quality_degradation` → finding view (mention `kpi_divergence` in the
-findings list as you pass it).
+**Screen:** Entity view — the amber **Supervisory Case** banner first
+("7 findings across 3 categories, joint confidence 1.00"), then profile
+cards + findings list. Click `changepoint_drift` → finding view.
 
 ## [0:50–1:10] Evidence drill-down
 
 > "Every finding carries its full evidence chain — finding, signal, metric,
-> down to individual records. The detection logic states its own threshold,
-> and each metric shows its exact calculation. An examiner can audit the
-> analytics itself, not just the conclusion."
+> down to individual records. This one states its own threshold *and* the
+> quarter it dates the break to, with the before/after levels and how much
+> of the variance that split explains. An examiner can audit the analytics
+> itself, not just the conclusion."
 
-**Screen:** Finding view — rationale, chain metrics (`calculation = value`),
-evidence table. Expand one record row to show key fields.
+**Screen:** Finding view for `changepoint_drift` — rationale, evidence
+table (`change_quarter`, `mean_before`, `mean_after`, `explained_share`).
 
 ## [1:10–1:25] Negative space
 
@@ -85,7 +90,8 @@ table). Show the missing_alert_categories finding.
 > through profiling, signal detection, peer benchmarking, into an
 > evidence-backed, prioritized review queue. Validation on our seeded
 > dataset: eight of eight weaknesses detected, zero high-severity false
-> alarms across forty-two clean entities. The system identifies. The
+> alarms across forty-two clean entities — and exactly four supervisory
+> cases formed, every one a seeded weak entity. The system identifies. The
 > examiner decides."
 
 **Screen:** Back to portfolio overview for the closing frame.

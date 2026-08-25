@@ -1,4 +1,4 @@
-"""Supervisory signal engine: runs all 18 signals and persists findings.
+"""Supervisory signal engine: runs all registered signals and persists findings.
 
 Usage:
     python -m src.analytics.signal_engine run --db data/sat_sa.db
@@ -41,8 +41,8 @@ for _cat, _mod in CATEGORY_MODULES.items():
     for _name, _fn in _mod.SIGNALS:
         SIGNAL_REGISTRY[_name] = (_cat, _fn)
 
-assert len(SIGNAL_REGISTRY) == 19, \
-    f"expected 19 registered signals, found {len(SIGNAL_REGISTRY)}"
+assert len(SIGNAL_REGISTRY) == 20, \
+    f"expected 20 registered signals, found {len(SIGNAL_REGISTRY)}"
 
 FINDINGS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS findings (

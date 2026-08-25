@@ -127,6 +127,36 @@ class TestFullPortfolio:
         assert summary["scores_stored"] == 50
         assert summary["benchmark_rows"] > 0
 
+    def test_fusion_cases_match_the_gate_rule(self, full):
+        """Cases form exactly for CSEs with 2+ findings across 2+ categories.
+
+        On the seeded portfolio that is the four multi-signal seeded CSEs;
+        clean CSEs carry one finding each and must stay case-free.
+        """
+        summary, db = full
+        from collections import defaultdict
+
+        from src.analytics.fusion import load_cases
+
+        from src.evidence.findings import load_findings_as_objects
+
+        by_cse = defaultdict(list)
+        for f in load_findings_as_objects(db):
+            by_cse[f.cse_id].append(f)
+        expected = {c for c, fs in by_cse.items()
+                    if len(fs) >= 2
+                    and len({x.signal_category for x in fs}) >= 2}
+        rows = load_cases(db)
+        assert {r["cse_id"] for r in rows} == expected
+        assert summary["supervisory_cases"] == len(rows)
+        # the flagship case: every member linked, joint confidence saturated
+        case = next(r for r in rows if r["cse_id"] == "CSE-042")
+        assert case["case_id"] == "CASE-CSE-042"
+        assert case["n_findings"] == 7
+        assert len(case["finding_ids"]) == 7
+        assert len(case["categories"]) >= 2
+        assert case["joint_confidence"] == pytest.approx(1.0)
+
 
 class TestApiServesPipelineResults:
     """The dashboard renders exclusively from these endpoints."""
@@ -182,3 +212,58 @@ class TestApiServesPipelineResults:
         assert data["finding"]["contributing_record_ids"] == []
         assert data["chain"] is not None
         assert data["chain"]["metrics"], "metric-level finding lost metrics"
+
+    def test_quantitative_signals_show_numbers_in_their_chains(self, full):
+        """changepoint_drift / kpi_divergence keys must be tracer-registered,
+        else the finding page renders no metric steps (chain depth < 3)."""
+        _, db = full
+        client = TestClient(create_app(db))
+        cp = client.get(
+            "/api/findings/CSE-042:changepoint_drift/explain").json()["data"]
+        assert cp["chain"]["depth"] >= 3
+        names = {m["metric_name"] for m in cp["chain"]["metrics"]}
+        assert {"mean_before", "mean_after", "drop",
+                "explained_share"} <= names
+        assert cp["chain"]["metrics"][0]["calculation"]
+        kpi = client.get(
+            "/api/findings/CSE-042:kpi_divergence/explain").json()["data"]
+        assert kpi["chain"]["depth"] >= 3
+        knames = {m["metric_name"] for m in kpi["chain"]["metrics"]}
+        assert {"depth_slope_per_quarter",
+                "velocity_slope_per_quarter"} <= knames
+
+    def test_every_finding_has_a_deep_evidence_chain(self, full):
+        """Systemic guard: no signal may emit only unregistered evidence keys
+        (the finding page would render an empty metric panel)."""
+        _, db = full
+        from src.evidence.findings import load_findings_as_objects
+        from src.evidence.tracer import EvidenceTracer
+
+        tracer = EvidenceTracer(db)
+        shallow = []
+        for f in load_findings_as_objects(db):
+            chain = tracer.trace(f.finding_id)
+            if chain is None or chain.depth < 3 or not chain.metrics:
+                shallow.append(f.finding_id)
+        assert not shallow, f"findings without metric steps: {shallow}"
+
+    def test_cases_api_contract(self, full):
+        _, db = full
+        client = TestClient(create_app(db))
+        body = client.get("/api/cases")
+        assert body.status_code == 200
+        rows = body.json()["data"]
+        assert {r["case_id"] for r in rows} == {
+            "CASE-CSE-017", "CASE-CSE-031", "CASE-CSE-042", "CASE-CSE-061"}
+        detail = client.get("/api/cases/CASE-CSE-042")
+        assert detail.status_code == 200
+        payload = detail.json()["data"]
+        assert payload["case"]["n_findings"] == 7
+        assert len(payload["member_findings"]) == 7
+        assert all("evidence" not in m for m in payload["member_findings"])
+        # unknown case -> structured 404
+        assert client.get("/api/cases/CASE-NOWHERE").status_code == 404
+        # cse filter narrows to that CSE's case only
+        filtered = client.get("/api/cases", params={"cse_id": "CSE-017"})
+        assert [r["case_id"] for r in filtered.json()["data"]] == \
+            ["CASE-CSE-017"]

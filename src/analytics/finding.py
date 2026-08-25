@@ -141,6 +141,15 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
         "max_diversity_categories": 4,
         "scale": 100,              # final priority scale (0-100)
     },
+    "fusion": {
+        "min_findings": 2,         # below this there is nothing to fuse
+        "min_categories": 2,       # cross-category corroboration required
+    },
+    "feedback": {
+        "min_feedback": 5,             # dispositions before a rate is advisory
+        "low_worthwhile_rate": 0.30,   # below this, suggest tightening
+        "high_worthwhile_rate": 0.85,  # above this, signal is earning its keep
+    },
     "superficial_closure": {
         "max_closure_hours": 2.0,      # median alert->closure at/below this = fast
         "shallow_depth_max": 2.0,      # median evidence entries at/below this = shallow
@@ -199,6 +208,15 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
     "temporal_drift": {
         "depth_drop_frac": 0.40,       # QoQ depth drop beyond this flags
         "velocity_jump_factor": 2.5,   # QoQ closure-velocity ratio beyond this flags
+    },
+    "changepoint_drift": {
+        "min_points": 4,               # quarterly observations needed for a split
+        "min_segment": 2,              # quarters required on EACH side of the split
+        "min_drop": 0.90,              # entries lost across the change (2x clean max)
+        "drop_bound": 3.00,            # drop magnitude saturating margin
+        "min_drop_frac": 0.20,         # relative decline across the change
+        "frac_bound": 0.70,
+        "min_explained_share": 0.60,   # two-level model must explain the window
     },
     "unusual_quiet_period": {
         "min_quiet_periods": 18,       # gaps > quiet_gap_hours within the window

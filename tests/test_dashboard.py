@@ -53,12 +53,26 @@ class TestPages:
         for key in ("m-alert_volume_total", "m-inv_depth_mean",
                     "m-closure_velocity_median_h", "m-esc_rate"):
             assert f'id="{key}"' in resp.text
+        # fused-case banner slot exists (hidden until a case is fetched)
+        assert 'id="case-banner"' in resp.text
+        assert "/api/cases" in client.get(
+            "/dashboard/static/js/app.js").text
+        assert ".case-banner" in client.get(
+            "/dashboard/static/css/style.css").text
 
     def test_finding_page_keeps_colon_in_id(self, client):
         fid = "CSE-001:some_signal"
         resp = client.get(f"/dashboard/finding/{fid}")
         assert resp.status_code == 200
         assert fid in resp.text          # :path converter preserved it
+        # examiner feedback loop UI is part of the shell
+        assert 'id="feedback-panel"' in resp.text
+        for disposition in ("worthwhile", "not_worthwhile", "uncertain"):
+            assert f'data-disposition="{disposition}"' in resp.text
+        js = client.get("/dashboard/static/js/app.js").text
+        assert "/feedback" in js
+        assert ".fb-btn" in client.get(
+            "/dashboard/static/css/style.css").text
 
 
 class TestOfflineAssets:

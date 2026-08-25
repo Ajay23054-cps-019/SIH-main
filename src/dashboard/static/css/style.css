@@ -85,6 +85,41 @@ h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
   margin-bottom: 1.25rem;
 }
 
+/* ---- Fused supervisory case banner ------------------------------------- */
+
+.case-banner {
+  border-left: 4px solid var(--medium);
+  background: var(--medium-bg);
+}
+.case-banner h2 { margin-top: 0; }
+.case-narrative { margin-bottom: 0.5rem; }
+.case-members { margin-bottom: 0.5rem; }
+.case-member { margin-right: 0.5rem; }
+
+/* ---- Examiner feedback buttons ------------------------------------------ */
+
+.feedback-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+.fb-btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+}
+.fb-btn:hover { border-color: var(--accent); }
+.fb-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* ---- Summary cards (flex, wraps on small screens) --------------------- */
 
 .summary-cards {
