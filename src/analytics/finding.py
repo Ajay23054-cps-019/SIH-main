@@ -205,6 +205,21 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, Any]] = {
         "min_critical_alerts": 10,     # critical alerts w/ zero linked escalations
         "min_weekend_critical": 5,     # weekend variant
     },
+    "evidence_deficit": {
+        "min_alerts": 100,             # severity mix needs volume to be stable
+        "min_expected": 20.0,          # dimensions with a smaller expectation
+                                       # are skipped (band too wide to mean much)
+        "band_z": 3.0,                 # σ widths for the uncertainty band
+        "overdispersion": 0.001,       # variance inflation φ in the band
+        "min_ratio_alerts": 0.75,      # observed/expected gates — each set
+        "min_ratio_investigations": 0.90,   # ~2x below the measured clean
+        "min_ratio_evidence_entries": 0.85, # minimum (clean portfolio sits
+        "min_ratio_escalations": 0.80,      # at 0.90-1.01 across dimensions)
+        "ratio_bound_alerts": 0.40,    # margin saturation floors
+        "ratio_bound_investigations": 0.60,
+        "ratio_bound_evidence_entries": 0.40,
+        "ratio_bound_escalations": 0.50,
+    },
     "temporal_drift": {
         "depth_drop_frac": 0.40,       # QoQ depth drop beyond this flags
         "velocity_jump_factor": 2.5,   # QoQ closure-velocity ratio beyond this flags

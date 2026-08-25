@@ -7,10 +7,11 @@ silent assets), and the absence itself is documented in evidence/caveats.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from src.analytics.expected_evidence import DIMENSIONS, evidence_table_for
 from src.analytics.execution_gaps import make_finding
 from src.analytics.finding import (
     cap_ids,
@@ -335,12 +336,114 @@ def detect_escalation_absence(ctx: SignalContext) -> Optional[Finding]:
     return f
 
 
+# ---------------------------------------------------------------------------
+# 11. evidence_deficit
+# ---------------------------------------------------------------------------
+
+
+def detect_evidence_deficit(ctx: SignalContext) -> Optional[Finding]:
+    """Total evidence below what the portfolio model expects for this CSE.
+
+    Generalises negative space from 'category absent' to 'quantitatively
+    thin': the expected-evidence model (see
+    ``src.analytics.expected_evidence``) states how many alerts,
+    investigations, evidence entries and escalations a portfolio-typical
+    SOC would have produced given this CSE's size band and severity mix —
+    every baseline estimated leave-self-out. A dimension is thin only when
+    it clears BOTH its calibrated ratio gate AND the model band's lower
+    edge; the worst dimension becomes the headline.
+    """
+    t = ctx.thresholds["evidence_deficit"]
+    alerts = ctx.cse_frames.get("alerts")
+    if alerts is None or len(alerts) < t["min_alerts"]:
+        return None
+    table = evidence_table_for(
+        ctx.cse_id, ctx.frames, band_z=t["band_z"],
+        overdispersion=t["overdispersion"],
+    )
+    if table is None:
+        return None
+
+    verdicts: List[Dict[str, Any]] = []
+    for dim in DIMENSIONS:
+        entry = table[dim]
+        expected, observed = entry["expected"], entry["observed"]
+        if expected is None or expected < t["min_expected"]:
+            continue
+        ratio = entry["ratio"]
+        gate = t[f"min_ratio_{dim}"]
+        # The band protects small-count dimensions: below the ratio gate
+        # but inside the statistical band is not called thin.
+        if ratio >= gate or observed >= entry["band_low"]:
+            continue
+        verdicts.append({
+            "dimension": dim,
+            "ratio": ratio,
+            "gate": gate,
+            "margin": margin_below(ratio, gate, t[f"ratio_bound_{dim}"]),
+            "observed": observed,
+            "expected": expected,
+            "band_low": entry["band_low"],
+            "band_high": entry["band_high"],
+        })
+
+    if not verdicts:
+        return None
+    worst = max(verdicts, key=lambda v: v["margin"])
+    f = make_finding(
+        ctx, "evidence_deficit", PERIOD_ALL,
+        category=SIGNAL_CATEGORY,
+        evidence={
+            "headline_dimension": worst["dimension"],
+            "headline_observed": worst["observed"],
+            "headline_expected": worst["expected"],
+            "headline_ratio": worst["ratio"],
+            "headline_band_low": worst["band_low"],
+            "headline_band_high": worst["band_high"],
+            "min_ratio_applied": worst["gate"],
+            "dimensions": {v["dimension"]: {
+                "observed": v["observed"], "expected": v["expected"],
+                "ratio": v["ratio"], "band_low": v["band_low"],
+                "band_high": v["band_high"]} for v in verdicts},
+        },
+        logic=(
+            f"{worst['dimension'].replace('_', ' ').capitalize()} are "
+            f"{worst['ratio']:.0%} of the portfolio-expected volume for "
+            f"this alert stream ({worst['observed']:,.0f} observed vs "
+            f"{worst['expected']:,.0f} expected; {t['band_z']:g}σ band "
+            f"{worst['band_low']:,.0f}–{worst['band_high']:,.0f}) — "
+            f"evidence thinner than the composition implies."
+        ),
+        confidence=combined_confidence(
+            sample_confidence(len(alerts), 100), worst["margin"],
+        ),
+        actions=[
+            "Ask why submitted evidence falls short of the volume the "
+            "alert stream implies",
+            "Reconcile investigation and escalation records against the "
+            "flagged dimension",
+            "Check whether records are held in a system this submission "
+            "does not cover",
+        ],
+        caveats=[
+            "Expectations are portfolio baselines conditioned on size band "
+            "and severity mix, estimated without the CSE's own records; a "
+            "legitimately quieter threat profile is possible.",
+        ],
+        quality_notes=list(ctx.profile(PERIOD_ALL).warnings)
+        if ctx.profile(PERIOD_ALL) else [],
+    )
+    f.severity = severity_from(worst["margin"])
+    return f
+
+
 SIGNALS = [
     ("alert_volume_gap", detect_alert_volume_gap),
     ("missing_investigations", detect_missing_investigations),
     ("missing_alert_categories", detect_missing_alert_categories),
     ("telemetry_absence", detect_telemetry_absence),
     ("escalation_absence", detect_escalation_absence),
+    ("evidence_deficit", detect_evidence_deficit),
 ]
 
 

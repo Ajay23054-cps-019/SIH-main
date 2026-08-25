@@ -241,6 +241,22 @@ SIGNAL_EVIDENCE_CALCULATIONS = {
     "explained_share":
         lambda ev: f"1 − SSE(two-segment model) ÷ SSE(flat mean) "
                    f"(SSEs {ev.get('sse_split')} vs {ev.get('sse_flat')})",
+    # --- evidence_deficit ---
+    "headline_observed":
+        lambda ev: f"total {ev.get('headline_dimension')} submitted by this "
+                   "CSE across the window",
+    "headline_expected":
+        lambda ev: (f"portfolio leave-self-out baseline for this CSE's size "
+                    f"band / severity mix (band low "
+                    f"{ev.get('headline_band_low')}, band high "
+                    f"{ev.get('headline_band_high')})"),
+    "headline_ratio":
+        lambda ev: f"headline_observed ÷ headline_expected "
+                   f"({ev.get('headline_observed')} ÷ "
+                   f"{ev.get('headline_expected')})",
+    "min_ratio_applied":
+        lambda ev: "calibrated ratio gate for the headline dimension; a "
+                   "deficit must ALSO fall below the band's lower edge",
 }
 
 
