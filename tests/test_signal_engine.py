@@ -449,6 +449,147 @@ class TestEscalationAbsence:
         assert f.severity == "MEDIUM"
 
 
+class TestEvidenceDeficit:
+    """Expected-evidence model signal: thin vs the leave-self-out baseline.
+
+    Reference CSE (healthy): 100 HIGH + 100 MEDIUM alerts, all investigated
+    at 5 entries, 50 escalations on HIGH investigations. Target CSE-T01:
+    60 HIGH + 60 MEDIUM alerts — LOO baselines are therefore exactly the
+    reference rates (inv 1.0, depth 5.0, esc HIGH 0.5 / MEDIUM 0.0).
+    """
+
+    def _frames(self, target_entries=5, target_inv_share=1.0,
+                target_esc_n=50, ref_esc_n=50):
+        ref_alerts = _alert_rows(
+            [{"alert_id": f"R-AH{i}", "cse_id": "CSE-REF", "severity": "HIGH"}
+             for i in range(100)]
+            + [{"alert_id": f"R-AM{i}", "cse_id": "CSE-REF",
+                "severity": "MEDIUM"} for i in range(100)],
+            cse_id="CSE-REF")
+        ref_inv = _inv_rows(
+            [{"investigation_id": f"R-I{i}",
+              "alert_id": f"R-{'AH' if i < 100 else 'AM'}{i % 100}",
+              "evidence_entries": 5} for i in range(200)],
+            cse_id="CSE-REF")
+        ref_esc = _esc_rows(
+            [{"escalation_id": f"R-E{i}", "investigation_id": f"R-I{i}"}
+             for i in range(ref_esc_n)],
+            cse_id="CSE-REF")
+
+        n_inv = int(200 * target_inv_share)
+        tgt_alerts = _alert_rows(
+            [{"alert_id": f"T-AH{i}", "severity": "HIGH"} for i in range(100)]
+            + [{"alert_id": f"T-AM{i}", "severity": "MEDIUM"}
+               for i in range(100)])
+        tgt_inv = _inv_rows(
+            [{"investigation_id": f"T-I{i}",
+              "alert_id": f"T-AH{i}" if i < 100 else f"T-AM{i - 100}",
+              "evidence_entries": target_entries} for i in range(n_inv)])
+        tgt_esc = _esc_rows(
+            [{"escalation_id": f"T-E{i}", "investigation_id": f"T-I{i}"}
+             for i in range(target_esc_n)])
+
+        frames = {
+            "cse_metadata": pd.DataFrame([
+                {"cse_id": "CSE-REF", "sector": "Telecom",
+                 "size_band": "Medium"},
+                {"cse_id": "CSE-T01", "sector": "Telecom",
+                 "size_band": "Medium"},
+            ]),
+            "alerts": pd.concat([ref_alerts, tgt_alerts], ignore_index=True),
+            "investigations": pd.concat([ref_inv, tgt_inv],
+                                        ignore_index=True),
+            "escalations": pd.concat([ref_esc, tgt_esc], ignore_index=True),
+            "cases": pd.DataFrame(),
+            "assets": pd.DataFrame(),
+        }
+        cse_frames = {
+            k: (v[v["cse_id"] == "CSE-T01"].copy() if len(v) else v)
+            for k, v in frames.items()
+        }
+        return frames, cse_frames
+
+    def _ctx(self, **kw):
+        frames, cse_frames = self._frames(**kw)
+        return _ctx(cse_frames=cse_frames, frames=frames)
+
+    def test_normal_evidence_is_silent(self):
+        assert ns.detect_evidence_deficit(self._ctx()) is None
+
+    def test_thin_evidence_entries_fire(self):
+        f = ns.detect_evidence_deficit(self._ctx(target_entries=1))
+        assert f is not None
+        ev = f.evidence
+        assert ev["headline_dimension"] == "evidence_entries"
+        assert ev["headline_observed"] == 200.0
+        assert ev["headline_expected"] == pytest.approx(1000.0)
+        assert ev["headline_ratio"] == pytest.approx(0.2)
+        # Below the band's lower edge, past the gate -> HIGH with margin 1.0.
+        assert f.severity == "HIGH"
+        assert f.confidence == 1.0
+        assert "portfolio-expected volume" in f.detection_logic
+        assert "dimensions" in ev          # full table carried as context
+
+    def test_investigations_deficit_fires(self):
+        # 50% of alerts never investigated -> ratio 0.5, far under band.
+        # Escalations held at parity so investigations is the only thin dim.
+        f = ns.detect_evidence_deficit(
+            self._ctx(target_inv_share=0.5, target_esc_n=50))
+        assert f is not None
+        ev = f.evidence
+        assert ev["headline_dimension"] == "investigations"
+        assert ev["headline_observed"] == 100.0
+        assert ev["headline_expected"] == pytest.approx(200.0)
+        assert f.severity == "HIGH"
+
+    def test_band_protects_small_counts(self):
+        # Expected escalations = 50 (100 HIGH x 0.5); observed 32 is ratio
+        # 0.64 (past the 0.80 gate) but INSIDE the 3-sigma band -> not thin.
+        f = ns.detect_evidence_deficit(self._ctx(target_esc_n=32))
+        assert f is None
+
+    def test_escalation_deficit_below_band_fires(self):
+        f = ns.detect_evidence_deficit(self._ctx(target_esc_n=20))
+        assert f is not None
+        ev = f.evidence
+        assert ev["headline_dimension"] == "escalations"
+        assert ev["headline_observed"] == 20.0
+        assert ev["headline_expected"] == pytest.approx(50.0)
+        assert ev["headline_band_low"] > 20.0
+
+    def test_min_expected_skips_tiny_dimensions(self):
+        # Escalation expectation of 6 (< min_expected) is skipped even at
+        # ratio 0 — the band would be too wide to mean anything.
+        f = ns.detect_evidence_deficit(
+            self._ctx(target_esc_n=0, ref_esc_n=10))
+        assert f is None
+
+    def test_min_alerts_guard(self):
+        frames, cse_frames = self._frames(target_entries=1)
+        cse_frames["alerts"] = cse_frames["alerts"].iloc[:50]
+        f = ns.detect_evidence_deficit(
+            _ctx(cse_frames=cse_frames, frames=frames))
+        assert f is None
+
+    def test_threshold_override_loosens(self):
+        cfg = load_thresholds()
+        cfg["evidence_deficit"]["min_ratio_evidence_entries"] = 0.05
+        frames, cse_frames = self._frames(target_entries=1)
+        f = ns.detect_evidence_deficit(
+            _ctx(cse_frames=cse_frames, frames=frames, thresholds=cfg))
+        assert f is None
+
+    def test_unknown_cse_silent(self):
+        frames, _ = self._frames()
+        ctx = _ctx(cse_frames=_empty_frames(), frames=frames)
+        assert ns.detect_evidence_deficit(ctx) is None
+
+
+# ---------------------------------------------------------------------------
+# Behavioral-anomaly signals
+# ---------------------------------------------------------------------------
+
+
 # ---------------------------------------------------------------------------
 # Behavioral-anomaly signals
 # ---------------------------------------------------------------------------
@@ -695,8 +836,8 @@ class TestPeerDeviation:
 
 
 class TestEngineMechanics:
-    def test_registry_has_20_signals_in_four_categories(self):
-        assert len(SIGNAL_REGISTRY) == 20
+    def test_registry_has_21_signals_in_four_categories(self):
+        assert len(SIGNAL_REGISTRY) == 21
         cats = {cat for cat, _ in SIGNAL_REGISTRY.values()}
         assert cats == {"execution_gap", "negative_space",
                         "behavioral_anomaly", "peer_deviation"}

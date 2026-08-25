@@ -214,10 +214,32 @@ def profile_trends(cse_id: str, metric: str, periods: int = 4,
                      f"metric '{key}' absent from these profiles"})
 
 
+@router.get("/evidence-model/{cse_id}")
+def evidence_model(cse_id: str, db_path: Path = Depends(get_db_path)):
+    """Expected-vs-observed evidence table for one CSE.
+
+    The expected-evidence model states how many alerts, investigations,
+    evidence entries and escalations a portfolio-typical SOC would have
+    produced given this CSE's size band and severity mix — every baseline
+    estimated leave-self-out. Explanatory view; the ``evidence_deficit``
+    signal is the gated detector built on it.
+    """
+    from src.analytics.expected_evidence import evidence_table_for
+
+    frames = _load_frames(db_path)
+    table = evidence_table_for(cse_id, frames)
+    if table is None:
+        raise NotFound(f"no submitted records for {cse_id}")
+    return envelope({"cse_id": cse_id, "dimensions": table},
+                    meta={"note": "Baselines are portfolio expectations "
+                          "conditioned on composition, estimated "
+                          "leave-self-out (without this CSE's own records); "
+                          "bands are 3σ negative-binomial approximations."})
+
+
 # ---------------------------------------------------------------------------
 # Findings
 # ---------------------------------------------------------------------------
-
 
 @router.get("/findings")
 def findings_list(cse_id: Optional[str] = None,

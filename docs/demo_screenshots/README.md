@@ -17,6 +17,7 @@ Capture at 1920×1080, browser zoom 125%, after a fresh pipeline run.
 | `04_entity_cse089_negative_space.png` | `/dashboard/entity/CSE-089` | missing_alert_categories finding (zero endpoint alerts vs 217 endpoint assets) |
 | `05_swagger.png` | `/docs` | Live API contract (for "every number comes from the API") |
 | `06_finding_changepoint.png` | `/dashboard/finding/CSE-042:changepoint_drift` | Change-point finding: onset quarter, before/after depth means, explained variance in the metric chain |
+| `07_finding_evidence_deficit.png` | `/dashboard/finding/CSE-017:evidence_deficit` | Expected-evidence model: observed vs leave-self-out expected counts with the 3σ band |
 
 Naming matters: in the fallback walkthrough the presenter types only
 `01_`, `02_`, … and narrates from `docs/demo_script.md`.

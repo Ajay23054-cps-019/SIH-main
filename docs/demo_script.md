@@ -30,11 +30,11 @@ Everything runs locally — no internet needed at any point.
 > hour goes. The top of this queue is dominated by seeded weak SOCs our
 > team injected into the data beforehand.
 >
-> Number one is CSE-042 — seven findings, which the fusion layer has
+> Number one is CSE-042 — eight findings, which the fusion layer has
 > combined into a single supervisory case. Let's see why."
 
-**Screen:** Point at the ranked table (CSE-042 #1 at 89.1, CSE-031 #2 at
-88.5). Click the **CSE-042** row → entity view.
+**Screen:** Point at the ranked table (CSE-042 #1 at 91.6, CSE-017 #2 at
+86.8). Click the **CSE-042** row → entity view.
 
 ## [0:30–0:50] Execution gap
 
@@ -49,7 +49,7 @@ Everything runs locally — no internet needed at any point.
 > question you can ask: *what changed that quarter?*"
 
 **Screen:** Entity view — the amber **Supervisory Case** banner first
-("7 findings across 3 categories, joint confidence 1.00"), then profile
+("8 findings across 4 categories, joint confidence 1.00"), then profile
 cards + findings list. Click `changepoint_drift` → finding view.
 
 ## [0:50–1:10] Evidence drill-down
@@ -63,18 +63,25 @@ cards + findings list. Click `changepoint_drift` → finding view.
 **Screen:** Finding view for `changepoint_drift` — rationale, evidence
 table (`change_quarter`, `mean_before`, `mean_after`, `explained_share`).
 
-## [1:10–1:25] Negative space
+## [1:10–1:30] Negative space — and its quantitative generalization
 
 > "Back in the queue — CSE-089 manages **217 endpoint assets**, and peers
 > report endpoint alerts universally. CSE-089's endpoint alert count?
 > **Zero**, out of 2,669 alerts. That's negative space: expected evidence
 > that is absent. Broken EDR, disabled monitoring, or unsubmitted data —
-> either way, it's NCIIPC's question to ask."
+> either way, it's NCIIPC's question to ask.
+>
+> And absence is just the extreme case. The expected-evidence model
+> catches the subtler version: CSE-017 submitted **2,370 evidence entries**
+> where the portfolio baseline — built without its own records — expects
+> **7,878**. That's 30% of expectation, far below the three-sigma band.
+> Evidence *thinner than expected*, with a number attached."
 
 **Screen:** Navigate to `/dashboard/entity/CSE-089` (or use browser back +
-table). Show the missing_alert_categories finding.
+table). Show the missing_alert_categories finding; then open
+`/dashboard/finding/CSE-017:evidence_deficit` for the thin-evidence numbers.
 
-## [1:25–1:45] Peer context
+## [1:30–1:45] Peer context
 
 > "Findings also come with peer context. CSE-042 sits in the
 > Telecom-Large group. Peer mean investigation depth: **4.9 entries**.

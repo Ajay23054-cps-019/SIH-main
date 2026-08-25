@@ -13,7 +13,7 @@ Dataset: `data/samples/demo_dataset` · ground truth: `scripts/design_test_cases
 | False-positive rate | HIGH findings on clean CSEs / total | 0% | < 40% | PASS |
 | Examiner alignment | Spearman(priority, oracle order), n=8 + clean | 0.909 | >= 0.70 | PASS |
 
-Secondary framing — precision counting every finding on a seeded CSE as true: **93%** (both framings exceed target; definitions differ only in how corroborating signals on already-flagged CSEs are treated).
+Secondary framing — precision counting every finding on a seeded CSE as true: **94%** (both framings exceed target; definitions differ only in how corroborating signals on already-flagged CSEs are treated).
 
 ## Case-by-case results
 
@@ -23,14 +23,14 @@ Investigation depth declines quarter over quarter (quality degradation with temp
 
 - ✅ `quality_degradation` fired (confidence 0.990)
 - ✅ `temporal_drift` fired (confidence 0.935)
-- ℹ️ additional signals: `changepoint_drift`, `closure_velocity_outlier`, `investigation_depth_outlier`, `kpi_divergence`, `superficial_closure` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `changepoint_drift`, `closure_velocity_outlier`, `evidence_deficit`, `investigation_depth_outlier`, `kpi_divergence`, `superficial_closure` (corroborating; not required by the oracle)
 
 ### CSE-017 — superficial_closures [PASS]
 
 Alerts closed fast and shallow — superficial closure pattern
 
 - ✅ `superficial_closure` fired (confidence 0.758)
-- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_absence`, `escalation_rate_outlier`, `investigation_depth_outlier` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_absence`, `escalation_rate_outlier`, `evidence_deficit`, `investigation_depth_outlier` (corroborating; not required by the oracle)
 
 ### CSE-089 — missing_telemetry [PASS]
 
@@ -43,7 +43,7 @@ Entire alert category absent while peers report it (telemetry gap)
 Most critical alerts never receive an investigation
 
 - ✅ `missing_investigations` fired (confidence 1.000)
-- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_rate_outlier`, `investigation_depth_outlier`, `severity_mismatch` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_rate_outlier`, `evidence_deficit`, `investigation_depth_outlier`, `severity_mismatch` (corroborating; not required by the oracle)
 
 ### CSE-055 — fast_closure_outlier [PASS]
 
@@ -68,11 +68,11 @@ Investigation notes drawn from boilerplate templates
 Combined weak SOC: shallow depth far below peers
 
 - ✅ `investigation_depth_outlier` fired (confidence 1.000)
-- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_rate_outlier`, `escalation_without_action`, `superficial_closure` (corroborating; not required by the oracle)
+- ℹ️ additional signals: `closure_velocity_outlier`, `escalation_rate_outlier`, `escalation_without_action`, `evidence_deficit`, `superficial_closure` (corroborating; not required by the oracle)
 
 ## Portfolio-level observations
 
-- 28 findings across the portfolio (21 HIGH, 3 LOW, 4 MEDIUM).
+- 32 findings across the portfolio (23 HIGH, 3 LOW, 6 MEDIUM).
 - HIGH-severity findings on non-seeded CSEs: **0**.
 - LOW/MEDIUM informational findings on clean CSEs: **2** — isolated metric tails reviewed during tuning: `investigation_depth_outlier` on CSE-024; `closure_velocity_outlier` on CSE-032.
 

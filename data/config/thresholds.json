@@ -84,6 +84,20 @@
     "min_critical_alerts": 10,
     "min_weekend_critical": 5
   },
+  "evidence_deficit": {
+    "min_alerts": 100,
+    "min_expected": 20.0,
+    "band_z": 3.0,
+    "overdispersion": 0.001,
+    "min_ratio_alerts": 0.75,
+    "min_ratio_investigations": 0.9,
+    "min_ratio_evidence_entries": 0.85,
+    "min_ratio_escalations": 0.8,
+    "ratio_bound_alerts": 0.4,
+    "ratio_bound_investigations": 0.6,
+    "ratio_bound_evidence_entries": 0.4,
+    "ratio_bound_escalations": 0.5
+  },
   "temporal_drift": {
     "depth_drop_frac": 0.4,
     "velocity_jump_factor": 2.5

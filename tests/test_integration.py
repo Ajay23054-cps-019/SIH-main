@@ -152,8 +152,8 @@ class TestFullPortfolio:
         # the flagship case: every member linked, joint confidence saturated
         case = next(r for r in rows if r["cse_id"] == "CSE-042")
         assert case["case_id"] == "CASE-CSE-042"
-        assert case["n_findings"] == 7
-        assert len(case["finding_ids"]) == 7
+        assert case["n_findings"] == 8
+        assert len(case["finding_ids"]) == 8
         assert len(case["categories"]) >= 2
         assert case["joint_confidence"] == pytest.approx(1.0)
 
@@ -232,6 +232,49 @@ class TestApiServesPipelineResults:
         assert {"depth_slope_per_quarter",
                 "velocity_slope_per_quarter"} <= knames
 
+    def test_evidence_deficit_fires_only_on_seeded_thin_cses(self, full):
+        """The expected-evidence model must separate cleanly: the four
+        seeded thin CSEs fire, no clean CSE does."""
+        _, db = full
+        from src.evidence.findings import load_findings_as_objects
+
+        fired = {f.cse_id for f in load_findings_as_objects(db)
+                 if f.signal_type == "evidence_deficit"}
+        assert fired == {"CSE-017", "CSE-031", "CSE-042", "CSE-061"}
+        assert fired <= SEEDED                    # zero clean firings
+
+    def test_evidence_deficit_chain_carries_the_model(self, full):
+        _, db = full
+        client = TestClient(create_app(db))
+        data = client.get(
+            "/api/findings/CSE-042:evidence_deficit/explain").json()["data"]
+        assert data["chain"]["depth"] >= 3
+        names = {m["metric_name"] for m in data["chain"]["metrics"]}
+        assert {"headline_observed", "headline_expected", "headline_ratio",
+                "min_ratio_applied"} <= names
+        ev = data["finding"]["evidence"]
+        assert ev["headline_dimension"] == "evidence_entries"
+        assert ev["headline_ratio"] < 0.9         # genuinely thin
+        assert ev["headline_band_low"] > ev["headline_observed"]
+
+    def test_evidence_model_endpoint_contract(self, full):
+        _, db = full
+        client = TestClient(create_app(db))
+        body = client.get("/api/evidence-model/CSE-042")
+        assert body.status_code == 200
+        payload = body.json()["data"]
+        assert set(payload["dimensions"]) == {
+            "alerts", "investigations", "evidence_entries", "escalations"}
+        entries = payload["dimensions"]["evidence_entries"]
+        assert entries["ratio"] < 1.0
+        assert entries["band_low"] <= entries["expected"] <= entries["band_high"]
+        assert "leave-self-out" in body.json()["meta"]["note"]
+        # a clean CSE models as healthy on every dimension
+        clean = client.get("/api/evidence-model/CSE-001").json()["data"]
+        assert all(d["ratio"] > 0.9 or d["ratio"] is None
+                   for d in clean["dimensions"].values())
+        assert client.get("/api/evidence-model/CSE-NOWHERE").status_code == 404
+
     def test_every_finding_has_a_deep_evidence_chain(self, full):
         """Systemic guard: no signal may emit only unregistered evidence keys
         (the finding page would render an empty metric panel)."""
@@ -258,8 +301,8 @@ class TestApiServesPipelineResults:
         detail = client.get("/api/cases/CASE-CSE-042")
         assert detail.status_code == 200
         payload = detail.json()["data"]
-        assert payload["case"]["n_findings"] == 7
-        assert len(payload["member_findings"]) == 7
+        assert payload["case"]["n_findings"] == 8
+        assert len(payload["member_findings"]) == 8
         assert all("evidence" not in m for m in payload["member_findings"])
         # unknown case -> structured 404
         assert client.get("/api/cases/CASE-NOWHERE").status_code == 404

@@ -75,11 +75,12 @@ def _joined_investigations(frames: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     if inv is None or not len(inv):
         return pd.DataFrame(columns=["investigation_id", "cse_id", "severity",
                                      "evidence_entries"])
-    if alerts is None or not len(alerts) or \
-            "severity" not in inv.columns:
+    if alerts is None or not len(alerts):
+        inv = inv.copy()
         if "severity" not in inv.columns:
-            inv = inv.copy()
             inv["severity"] = None
+        return inv
+    if "severity" in inv.columns:
         return inv
     return inv.merge(alerts[["alert_id", "severity"]], on="alert_id",
                      how="left")
