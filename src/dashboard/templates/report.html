@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Supervisory Report — {{ cse_id }}</title>
+  <style>
+    :root { --ink:#1c2430; --muted:#5b6774; --line:#d7dde3; --high:#b91c1c; --medium:#92400e; --low:#166534; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); line-height:1.5; padding:2rem; }
+    h1 { margin:0 0 0.25rem; font-size:1.5rem; }
+    h2 { font-size:1.1rem; margin:1.5rem 0 0.5rem; border-bottom:2px solid var(--line); padding-bottom:0.25rem; }
+    h3 { font-size:0.95rem; margin:1rem 0 0.25rem; }
+    .meta { color:var(--muted); font-size:0.85rem; margin-bottom:1rem; }
+    .disclaimer { background:#fef3c7; padding:0.5rem 0.75rem; border-left:4px solid var(--medium); font-size:0.8rem; margin:1rem 0; }
+    table { width:100%; border-collapse:collapse; margin:0.5rem 0; font-size:0.85rem; }
+    th, td { padding:0.35rem 0.5rem; text-align:left; border-bottom:1px solid var(--line); }
+    th { background:#f4f6f8; font-weight:600; }
+    .badge { display:inline-block; padding:0.1rem 0.4rem; border-radius:3px; font-size:0.75rem; font-weight:600; }
+    .badge.high { background:#fee2e2; color:var(--high); }
+    .badge.medium { background:#fef3c7; color:var(--medium); }
+    .badge.low { background:#dcfce7; color:var(--low); }
+    .finding { border:1px solid var(--line); border-radius:4px; padding:0.75rem; margin:0.5rem 0; }
+    .finding-header { display:flex; justify-content:space-between; align-items:center; }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0.5rem; }
+    .metric-card { border:1px solid var(--line); border-radius:4px; padding:0.5rem; text-align:center; }
+    .metric-value { font-size:1.1rem; font-weight:600; }
+    .metric-label { font-size:0.7rem; color:var(--muted); }
+    .advisory { background:#fef3c7; padding:0.4rem 0.6rem; border-radius:4px; font-size:0.8rem; margin-top:0.5rem; }
+    .page-break { page-break-before:always; }
+    @media print { body { padding:0.5rem; } .no-print { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:right; margin-bottom:1rem;">
+    <button onclick="window.print()" style="padding:0.4rem 1rem; cursor:pointer;">Print / Save as PDF</button>
+  </div>
+
+  <h1>Supervisory Assessment Report</h1>
+  <div class="meta">
+    <strong>CSE:</strong> {{ cse_id }} &middot;
+    <strong>Sector:</strong> {{ sector }} &middot;
+    <strong>Size:</strong> {{ size }} &middot;
+    <strong>Generated:</strong> {{ generated_at }}
+  </div>
+
+  <div class="disclaimer">{{ disclaimer }}</div>
+
+  <h2>Summary</h2>
+  <table>
+    <tr><th>Total Findings</th><td>{{ findings | length }}</td>
+        <th>HIGH Severity</th><td>{{ findings | selectattr("severity","equalto","HIGH") | list | length }}</td></tr>
+    <tr><th>Categories</th><td>{{ findings | map(attribute="signal_category") | unique | list | length }}</td>
+        <th>Peer Outliers</th><td>{{ total_outliers }}</td></tr>
+  </table>
+
+  {% if findings %}
+  <h2>Findings</h2>
+  {% for f in findings %}
+  <div class="finding">
+    <div class="finding-header">
+      <h3><code>{{ f.signal_type }}</code> <span class="badge {{ f.severity | lower }}">{{ f.severity }}</span></h3>
+      <span class="meta">confidence: {{ "%.0f%%" | format(f.confidence * 100) }}</span>
+    </div>
+    <p>{{ f.detection_logic }}</p>
+    {% if f.caveats %}
+    <ul class="caveats">
+      {% for c in f.caveats %}<li>{{ c }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if f.recommended_actions %}
+    <strong>Recommended actions:</strong>
+    <ul>
+      {% for a in f.recommended_actions %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if profiles %}
+  <h2 class="page-break">Behavioral Profile</h2>
+  {% for p in profiles %}
+  <h3>{{ p.period }}</h3>
+  <div class="metric-grid">
+    <div class="metric-card"><div class="metric-value">{{ p.metrics.get("alert_volume_total","&ndash;") }}</div><div class="metric-label">Alerts</div></div>
+    <div class="metric-card"><div class="metric-value">{{ "%.2f" | format(p.metrics.get("inv_depth_mean",0)) }}</div><div class="metric-label">Investigation Depth</div></div>
+    <div class="metric-card"><div class="metric-value">{{ "%.1f" | format(p.metrics.get("closure_velocity_median_h",0)) }}h</div><div class="metric-label">Closure Time</div></div>
+    <div class="metric-card"><div class="metric-value">{{ "%.0f%%" | format(p.metrics.get("esc_rate",0)*100) }}</div><div class="metric-label">Escalation Rate</div></div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if benchmarks %}
+  <h2>Peer Comparison</h2>
+  {% for b in benchmarks[:5] %}
+  {% if b.outliers %}
+  <h3>{{ b.period }} &mdash; {{ b.group_label }}</h3>
+  <table>
+    <thead><tr><th>Metric</th><th>CSE Value</th><th>Peer Mean</th><th>Z-Score</th><th>Percentile</th></tr></thead>
+    <tbody>
+    {% for o in b.outliers %}
+    <tr>
+      <td><code>{{ o.metric }}</code></td>
+      <td>{{ "%.2f" | format(o.value) }}</td>
+      <td>{{ "%.2f" | format(o.peer_mean) }}</td>
+      <td>{{ "%.1f" | format(o.z_score) }}</td>
+      <td>{{ "%.0f" | format(o.percentile) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  <div class="meta" style="margin-top:2rem; border-top:1px solid var(--line); padding-top:0.5rem;">
+    SAT-SA Supervisory Analytics Tool &middot; This report was generated locally and contains potential supervisory concerns only.
+  </div>
+</body>
+</html>

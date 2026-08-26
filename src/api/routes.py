@@ -619,3 +619,67 @@ def analytics_status(job_id: str):
     if job is None:
         raise NotFound(f"unknown job '{job_id}'")
     return envelope(job)
+
+
+# ---------------------------------------------------------------------------
+# Report generation
+# ---------------------------------------------------------------------------
+
+
+@router.get("/report/{cse_id}")
+def report_html(cse_id: str, db_path: Path = Depends(get_db_path)):
+    """Render a printable HTML supervisory report for one CSE."""
+    from fastapi.responses import HTMLResponse
+
+    from src.analytics.benchmarking import load_benchmarks
+    from src.analytics.finding import load_thresholds
+    from src.analytics.profiles import BehavioralProfile
+    from src.dashboard.routes import templates as _jinja_templates
+    from src.evidence.findings import load_findings_as_objects
+    from src.storage.db import load_table
+
+    from src.analytics.profiler import load_profiles, rows_to_profiles
+
+    findings = [f for f in load_findings_as_objects(db_path) if f.cse_id == cse_id]
+    thresholds = load_thresholds()
+
+    meta_df = load_table("cse_metadata", db_path, cse_id=cse_id)
+    sector = str(meta_df["sector"].iloc[0]) if len(meta_df) and "sector" in meta_df else "Unknown"
+    size = str(meta_df["size_band"].iloc[0]) if len(meta_df) and "size_band" in meta_df else "Unknown"
+
+    prof_df = load_profiles(db_path, cse_id=cse_id)
+    profiles = rows_to_profiles(prof_df)
+
+    benches_loaded = load_benchmarks(db_path, cse_id=cse_id)
+    benches = []
+    total_outliers = 0
+    for _, row in benches_loaded.iterrows():
+        outs = json.loads(row["outliers_json"]) if row.get("outliers_json") else []
+        total_outliers += len(outs)
+        benches.append({
+            "period": row["period"],
+            "group_label": row.get("group_label", ""),
+            "outliers": outs,
+        })
+
+    template = _jinja_templates.get_template("report.html")
+    html = template.render(
+        cse_id=cse_id,
+        sector=sector,
+        size_band=size,
+        generated_at=envelope()["meta"]["generated_at"],
+        findings=findings,
+        profiles=profiles,
+        benchmarks=benches,
+        total_outliers=total_outliers,
+        disclaimer=(
+            "Potential supervisory concerns only — not determinations of "
+            "non-compliance. Attention Priority is a review-ordering heuristic, "
+            "not a risk or compliance score."
+        ),
+    )
+    filename = f"sat_sa_report_{cse_id.replace('-', '_')}.html"
+    return HTMLResponse(
+        content=html,
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\""},
+    )
