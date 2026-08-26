@@ -323,3 +323,46 @@ ul#actions-list li, ul#caveats li { margin-bottom: 0.3rem; }
 
 .upload-status .success { color: var(--low); }
 .upload-status .error { color: var(--high); }
+
+/* ---- Feedback pills in rankings table ------------------------------- */
+
+.fb-pill {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  background: var(--low-bg);
+  color: var(--low);
+  font-weight: 600;
+}
+
+.fb-pill-empty {
+  background: none;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.feedback-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.feedback-table th,
+.feedback-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.feedback-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.advisory {
+  font-size: 0.8rem;
+  color: var(--medium);
+  font-style: italic;
+}

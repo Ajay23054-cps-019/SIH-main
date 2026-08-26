@@ -59,11 +59,23 @@
         <th>Attention Priority</th>
         <th>Findings</th>
         <th>Top Signal</th>
+        <th>Feedback</th>
       </tr>
     </thead>
     <tbody id="rankings-body">
-      <tr><td colspan="6" class="loading">Loading&hellip;</td></tr>
+      <tr><td colspan="7" class="loading">Loading&hellip;</td></tr>
     </tbody>
   </table>
+</section>
+
+<section class="panel" id="feedback-summary-panel" hidden>
+  <h2>Examiner Feedback Calibration</h2>
+  <p class="muted">As you mark findings worthwhile / not worthwhile, advisory
+  guidance appears here. Feedback never alters stored analytics — a human
+  applies any threshold change via <code>data/config/thresholds.json</code>.</p>
+  <div id="feedback-summary-body">
+    <p class="muted">No feedback recorded yet. Open any finding and submit
+    a disposition to start the calibration loop.</p>
+  </div>
 </section>
 {% endblock %}

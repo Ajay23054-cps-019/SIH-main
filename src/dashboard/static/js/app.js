@@ -145,6 +145,12 @@ async function renderRankings() {
     const maxP = Math.max.apply(null, rows.map(function (r) {
       return r.priority; }).concat([0])) || 1;
 
+    const fbResp = await fetchJSON("/api/feedback/summary");
+    const fbBySignal = {};
+    (fbResp.data || []).forEach(function (s) { fbBySignal[s.signal_type] = s; });
+    const fbTotal = (fbResp.data || []).reduce(function (a, s) {
+      return a + s.n_feedback; }, 0);
+
     tbody.innerHTML = rows.map(function (r, i) {
       const sector = r.sector || "–";
       const sizeBand = r.size_band ? " · " + escapeHtml(r.size_band) : "";
@@ -153,6 +159,14 @@ async function renderRankings() {
         ? sevBadge(r.top_signal_severity) + " <code>" +
           escapeHtml(r.top_signal) + "</code>"
         : '<span class="muted">none</span>';
+      const fb = r.top_signal && fbBySignal[r.top_signal];
+      const fbCell = fb
+        ? '<span class="fb-pill" title="' +
+          escapeHtml([fb.worthwhile + ' worthwhile',
+                      fb.not_worthwhile + ' not worthwhile',
+                      fb.uncertain + ' uncertain'].join(', ')) + '">' +
+          fb.n_feedback + '×</span>'
+        : '<span class="muted fb-pill fb-pill-empty">–</span>';
       return '<tr tabindex="0" data-cse="' + escapeHtml(r.cse_id) + '">' +
         "<td>" + (i + 1) + "</td>" +
         "<td><strong>" + escapeHtml(r.cse_id) + "</strong></td>" +
@@ -160,7 +174,8 @@ async function renderRankings() {
         '<td class="num"><span class="priority-bar" style="width:' +
           barW + 'px"></span>' + r.priority.toFixed(1) + "</td>" +
         '<td class="num">' + r.n_findings + "</td>" +
-        "<td>" + signal + "</td></tr>";
+        "<td>" + signal + "</td>" +
+        '<td class="num">' + fbCell + "</td></tr>";
     }).join("");
 
     tbody.addEventListener("click", function (ev) {
@@ -174,9 +189,41 @@ async function renderRankings() {
       if (tr) window.location.href =
         "/dashboard/entity/" + encodeURIComponent(tr.dataset.cse);
     });
+
+    renderFeedbackSummary(fbResp.data || [], fbTotal);
   } catch (err) {
     setError(tbody, err.message);
   }
+}
+
+function renderFeedbackSummary(summary, total) {
+  const panel = document.getElementById("feedback-summary-panel");
+  const body = document.getElementById("feedback-summary-body");
+  if (!panel || !body) return;
+  if (!summary.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const advisories = summary.filter(function (s) { return s.advisory; });
+  body.innerHTML =
+    '<p class="muted">' + total + ' dispositions recorded across ' +
+    summary.length + ' signal types.</p>' +
+    (advisories.length
+      ? '<table class="feedback-table"><thead><tr><th>Signal</th>' +
+        '<th>Worthwhile</th><th>Not</th><th>Uncertain</th>' +
+        '<th>Rate</th><th>Advisory</th></tr></thead><tbody>' +
+        advisories.map(function (s) {
+          return '<tr><td><code>' + escapeHtml(s.signal_type) + '</code></td>' +
+            '<td class="num">' + s.worthwhile + '</td>' +
+            '<td class="num">' + s.not_worthwhile + '</td>' +
+            '<td class="num">' + s.uncertain + '</td>' +
+            '<td class="num">' + Math.round(s.worthwhile_rate * 100) + '%</td>' +
+            '<td><span class="advisory">' + escapeHtml(s.advisory) +
+            '</span></td></tr>';
+        }).join("") + '</tbody></table>"
+      : '<p class="muted">No advisories yet — keep recording dispositions ' +
+        'to surface calibration guidance.</p>');
 }
 
 // ---------------------------------------------------------------- entity
