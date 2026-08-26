@@ -270,3 +270,56 @@ ul#actions-list li, ul#caveats li { margin-bottom: 0.3rem; }
   .summary-cards { flex-direction: column; }
   .card { min-width: 0; }
 }
+
+/* ---- Upload panel ----------------------------------------------------- */
+
+.upload-panel {
+  border-left: 4px solid var(--accent);
+}
+
+.upload-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.upload-select,
+.upload-row input[type="file"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 0.9rem;
+}
+
+.upload-row input[type="file"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1a6b3a;
+}
+
+.upload-status {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.upload-status .success { color: var(--low); }
+.upload-status .error { color: var(--high); }

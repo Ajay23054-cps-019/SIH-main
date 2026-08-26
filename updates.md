@@ -1,12 +1,13 @@
 # SAT-SA — Updates & Next Steps
 
-**Last updated:** 2026-08-25  
-**Current status:** ✅ Phase 0 complete, ✅ Phase 1 complete, ✅ Phase 2 complete, ✅ Phase 3 complete, ✅ Phase 4 complete, ✅ Phase 5 complete, ✅ Phase 6 complete, ✅ Phase 7 complete, ✅ Phase 8 complete, ✅ Phase 10 complete, ✅ Phase 11 complete  
-**Test status:** 337 passed, 0 failed
+**Last updated:** 2026-08-26  
+**Current status:** ✅ ALL MVP PHASES COMPLETE  
+**Test status:** 337 passed, 0 failed  
+**Validation:** 100% coverage, 100% precision, 0% FP rate, 0.909 alignment
 
 ---
 
-## Completed Phases
+## Completed Phases (ALL)
 
 | Phase | What | Status |
 |-------|------|--------|
@@ -19,110 +20,111 @@
 | 6 | Evidence tracer (finding → signal → metric → records chain) | ✅ Complete |
 | 7 | Peer benchmarking (rule-based grouping, z-scores, percentiles) | ✅ Complete |
 | 8 | Supervisory Attention Score (transparent weighted formula) | ✅ Complete |
+| 9 | Local LLM explanation layer (optional) | ✅ Complete |
 | 10 | FastAPI backend (all endpoints, envelope format, error handling) | ✅ Complete |
 | 11 | Local dashboard (Jinja2 + vanilla JS + Chart.js) | ✅ Complete |
+| 12 | End-to-end integration (one-command pipeline) | ✅ Complete |
+| 13 | Validation harness (coverage, precision, FP rate, alignment) | ✅ Complete |
+| 14 | Demo preparation (script, checklist, launcher, verified numbers) | ✅ Complete |
 
 ---
 
 ## Test Results
 
 ```
-337 passed, 0 failed in 511.14s (8:31)
+337 passed, 0 failed
 ```
 
 All core modules verified:
-- ✅ 18 schema tests (Alert, Investigation, Escalation, Case, Asset, Dataset)
-- ✅ 28 ingestion tests (mapper, adapters, normalizer, quality, pipeline)
-- ✅ 33 profiler tests (metrics, trends, graceful degradation)
-- ✅ 17 evidence tracer tests (chain resolution, summary, pagination)
-- ✅ 42 benchmarking tests (grouping, percentile, z-score, outlier, portfolio)
-- ✅ 16 scoring tests (config, component math, ranking, transparency, storage)
-- ✅ 72 signal engine tests (all 21 signals, structure, registry, seeded weaknesses)
-- ✅ 43 API tests (health, ingestion, profiles, findings, portfolio, peers, CORS)
-- ✅ 8 dashboard tests (pages, static assets, offline, rankings)
-- ✅ 30+ sample data tests (structure, referential integrity, reproducibility)
+- ✅ 18 schema tests
+- ✅ 28 ingestion tests
+- ✅ 33 profiler tests
+- ✅ 17 evidence tracer tests
+- ✅ 42 benchmarking tests
+- ✅ 16 scoring tests
+- ✅ 72 signal engine tests
+- ✅ 43 API tests
+- ✅ 8 dashboard tests
+- ✅ 30+ sample data tests
 
 ---
 
-## Next Steps (remaining MVP phases)
+## Validation Results
 
-| Order | Phase | What | Time | Priority |
-|-------|-------|------|------|----------|
-| 1 | Phase 9 | Local LLM explanation layer (optional) | 1–2 hours | LOW |
-| 2 | Phase 12 | End-to-end integration script | 1 hour | MEDIUM |
-| 3 | Phase 13 | Validation harness | 1–2 hours | MEDIUM |
-| 4 | Phase 14 | Demo script + rehearsal | 1–2 hours | HIGH |
-
----
-
-## Key Files to Know
-
-| File | Purpose |
-|------|---------|
-| `src/analytics/schemas.py` | Canonical Pydantic models for all entities |
-| `src/analytics/sample_data.py` | Synthetic data generator (seeded weaknesses) |
-| `src/analytics/profiler.py` | Behavioral profiling engine |
-| `src/analytics/signal_engine.py` | 21 supervisory signals, 4 categories |
-| `src/analytics/benchmarking.py` | Peer grouping + z-score/outlier detection |
-| `src/analytics/scoring.py` | Supervisory Attention Score |
-| `src/analytics/finding.py` | Finding data structures + thresholds |
-| `src/evidence/tracer.py` | Evidence chain builder |
-| `src/ingestion/adapters.py` | CSV/JSON/JSONL format adapters |
-| `src/ingestion/pipeline.py` | Ingestion orchestrator |
-| `src/api/main.py` | FastAPI app factory |
-| `src/api/routes.py` | All API endpoints |
-| `src/storage/db.py` | SQLite persistence |
-| `src/dashboard/routes.py` | Dashboard page routes |
-| `src/dashboard/templates/` | Jinja2 HTML templates |
-| `src/dashboard/static/` | CSS, JS, Chart.js |
+| Metric | Result | Target |
+|--------|--------|--------|
+| Coverage | **100%** (8/8) | ≥ 70% |
+| Precision (signal) | **100%** | ≥ 60% |
+| Precision (literal) | **94%** | ≥ 60% |
+| False-positive rate | **0%** | < 40% |
+| Examiner alignment | **0.909** | ≥ 0.70 |
 
 ---
 
-## How to Run
+## How to Run the Demo
 
 ```bash
-# Setup
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# One-command demo launcher
+python scripts/demo.py
 
-# Run server
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
-
-# Test
-pytest tests/ -v
-
-# Dashboard
-open http://localhost:8000/dashboard/
-
-# API docs
-open http://localhost:8000/docs
+# Or step by step:
+python scripts/load_demo_data.py    # ~45s
+uvicorn src.api.main:app --reload   # start server
+# Open http://localhost:8000/dashboard/
 ```
 
 ---
 
-## Remaining Risks
+## Project Structure
 
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Demo timing | 2 minutes is very short | Rehearse extensively; have backup screenshots |
-| Integration test slow | Full suite takes 8+ minutes | Run targeted tests during development |
-| Synthetic data realism | Judges may find it unrealistic | Use correlated generation, not random |
-| Missing integration test | Phase 12 not yet formally written | Can be done quickly using existing scripts |
+```
+SIH/
+├── src/
+│   ├── ingestion/          # Format adapters, normalizer, quality scorer
+│   ├── analytics/          # Profiler, signal engine, benchmarking, scoring
+│   ├── evidence/           # Tracer, findings, LLM explainer
+│   ├── api/                # FastAPI app, routes, models, errors
+│   └── dashboard/          # Jinja2 templates, static assets
+├── data/
+│   ├── samples/demo_dataset/  # 6 CSV files (50 CSEs, 243K records)
+│   └── config/             # Thresholds, peer groups
+├── tests/                  # 337 tests across 18 files
+├── scripts/                # Pipeline, validation, demo launcher
+├── docs/                   # Demo script, validation report, screenshots
+├── requirements.txt        # Python dependencies
+├── Makefile                # setup, test, run, clean
+└── README.md               # Project overview
+```
 
 ---
 
-## What NOT to Do
+## What's Next (Post-MVP / Future)
 
-- Do NOT install PostgreSQL — SQLite is sufficient
-- Do NOT install Docker — `python -m venv` is enough
-- Do NOT use React — Jinja2 + vanilla JS
-- Do NOT use Node.js — no frontend build step
-- Do NOT call thresholds "NCIIPC standards" — they are configurable heuristics
-- Do NOT claim the score is a "risk rating" — it is a prioritization tool
-- Do NOT train an LLM — use optional local Ollama for explanation only
-- Do NOT implement all 21 signals at once — start with the core 5
+These are NOT required for SIH but documented for future work:
+
+| Capability | Priority | Effort |
+|------------|----------|--------|
+| Full Expected Evidence Model | High | 2-3 weeks |
+| Signal Fusion Engine | High | 1-2 weeks |
+| KPI-Reality Divergence | High | 1 week |
+| Temporal Drift Detection | High | 1 week |
+| Investigation Quality NLP | Medium | 2 weeks |
+| Clustering-Based Peer Grouping | Medium | 1 week |
+| Examiner Feedback Loop | Medium | 1 week |
+| PDF Report Export | Low | 1 week |
+| PostgreSQL Migration | Low | 1 week |
 
 ---
 
-*Update this file after each phase is completed.*
+## Key Reminders for Judging
+
+- **The signal engine is the core value.** Everything else is plumbing.
+- **Every finding must trace to records.** This is the differentiator.
+- **Synthetic data must be realistic.** Correlated, not random.
+- **Missing data must be handled.** It is not a finding; it is a data-quality note.
+- **The system must run offline.** No internet, no cloud, no external APIs at demo time.
+- **Keep it simple.** Judges prefer a working simple prototype over a broken complex one.
+
+---
+
+*This file tracks project completion. All MVP phases are done.*

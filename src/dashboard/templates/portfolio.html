@@ -4,6 +4,33 @@
 {% block content %}
 <h1>SAT-SA Portfolio Overview</h1>
 
+<section class="panel upload-panel">
+  <h2>Upload Your SOC Data</h2>
+  <p class="muted">Upload CSV, JSON, or JSONL files containing your SOC alerts,
+  investigations, escalations, cases, asset inventory, and CSE metadata.
+  All processing happens locally — no data leaves this machine.</p>
+  <form id="upload-form" enctype="multipart/form-data">
+    <div class="upload-row">
+      <select id="upload-entity" class="upload-select">
+        <option value="alerts">Alerts</option>
+        <option value="investigations">Investigations</option>
+        <option value="escalations">Escalations</option>
+        <option value="cases">Cases</option>
+        <option value="assets">Asset Inventory</option>
+        <option value="cse_metadata">CSE Metadata</option>
+      </select>
+      <input type="file" id="upload-file" accept=".csv,.json,.jsonl,.txt" />
+      <select id="upload-format" class="upload-select">
+        <option value="csv">CSV</option>
+        <option value="json">JSON</option>
+        <option value="jsonl">JSONL</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </div>
+  </form>
+  <div id="upload-status" class="upload-status"></div>
+</section>
+
 <div class="summary-cards">
   <div class="card">
     <div class="card-label">Total CSEs</div>

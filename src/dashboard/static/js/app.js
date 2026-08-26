@@ -74,6 +74,46 @@ document.addEventListener("DOMContentLoaded", function () {
 function initPortfolio() {
   renderSummary();
   renderRankings();
+  initUpload();
+}
+
+function initUpload() {
+  const form = document.getElementById("upload-form");
+  const status = document.getElementById("upload-status");
+  if (!form) return;
+
+  form.addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    const entity = document.getElementById("upload-entity").value;
+    const format = document.getElementById("upload-format").value;
+    const fileInput = document.getElementById("upload-file");
+    const file = fileInput.files[0];
+    if (!file) {
+      status.innerHTML = '<span class="error">Please select a file first.</span>';
+      return;
+    }
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("entity", entity);
+    fd.append("format", format);
+    status.innerHTML = '<span class="muted">Uploading ' + escapeHtml(file.name) + '...</span>';
+    try {
+      const resp = await fetch("/api/ingest/upload", { method: "POST", body: fd });
+      const body = await resp.json();
+      if (resp.ok && body.data) {
+        const d = body.data;
+        status.innerHTML = '<span class="success">Uploaded ' +
+          escapeHtml(file.name) + ': ' + d.records_ingested + ' records ingested' +
+          (d.quality_score != null ? ' (quality: ' + Math.round(d.quality_score * 100) + '%)' : '') +
+          '. <a href="#" onclick="location.reload(); return false;">Refresh dashboard</a></span>';
+      } else {
+        const err = body.errors && body.errors[0] ? body.errors[0].detail : 'Upload failed';
+        status.innerHTML = '<span class="error">' + escapeHtml(err) + '</span>';
+      }
+    } catch (err) {
+      status.innerHTML = '<span class="error">Upload failed: ' + escapeHtml(err.message) + '</span>';
+    }
+  });
 }
 
 async function renderSummary() {

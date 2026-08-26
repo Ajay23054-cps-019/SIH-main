@@ -11,8 +11,13 @@ from src.api.models import envelope
 from src.api.routes import router
 from src.dashboard.routes import router as dashboard_router
 
+DEFAULT_DB_PATH = Path("data/sat_sa.db")
+
 
 def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
+    if db_path is None:
+        db_path = DEFAULT_DB_PATH
+
     app = FastAPI(
         title="SAT-SA",
         description="Supervisory Analytics Tool for SOC Assessment",
@@ -21,8 +26,7 @@ def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
         redoc_url="/redoc",
     )
 
-    if db_path is not None:
-        app.state.db_path = str(db_path)
+    app.state.db_path = str(db_path)
 
     install_error_handlers(app)
 
@@ -37,12 +41,11 @@ def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
     @app.get("/health", tags=["system"])
     def health():
         data = {"status": "ok", "version": "0.1.0", "service": "SAT-SA"}
-        if db_path is not None:
-            try:
-                from src.storage.db import table_counts
-                data["table_counts"] = table_counts(db_path)
-            except Exception:
-                data["table_counts"] = {}
+        try:
+            from src.storage.db import table_counts
+            data["table_counts"] = table_counts(db_path)
+        except Exception:
+            data["table_counts"] = {}
         return JSONResponse(envelope(data=data))
 
     @app.get("/", tags=["system"])
