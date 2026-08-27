@@ -182,8 +182,8 @@ SIH/
 
 | Task | Effort | Priority |
 |------|--------|----------|
-| Reasoning Quality layer (4 signals) | 2 days | High |
-| Investigation notes in synthetic data | 1 day | High |
+| Reasoning Quality layer (4 signals) | Done | 20 tests |
+| Investigation notes in synthetic data | Done | ✅ |
 | Enhanced demo script with reasoning | 0.5 day | High |
 | Backup screenshots for all views | 0.5 day | Medium |
 | Final documentation update | 1 day | Medium |
@@ -397,7 +397,7 @@ GET    /api/profiles/{cse_id}/reasoning-depth # Per-period reasoning metrics
 - [x] Present interactive dashboard with drill-down
 - [x] Support examiner feedback loop
 - [x] Generate downloadable reports
-- [ ] Add Reasoning Quality layer (4 signals)
+- [x] Add Reasoning Quality layer (4 signals)
 
 ### Technical
 
@@ -437,4 +437,4 @@ uvicorn src.api.main:app --reload   # start server
 ---
 
 *Last updated: 2026-08-26*  
-*Status: MVP Complete — Implementing Reasoning Quality Layer*
+*Status: MVP Complete — Reasoning Quality Layer Implemented*
