@@ -1,0 +1,8 @@
+id,alert_id,cse_id,opened_at,closed_at,evidence_count,analyst,notes
+INV-001,EVT-001,ORG-002,2024-07-01T09:01:00,2024-07-01T09:01:00,1,analyst_a,Checked.
+INV-002,EVT-002,ORG-002,2024-07-01T10:01:00,2024-07-01T10:02:00,1,analyst_b,Checked. Benign.
+INV-003,EVT-003,ORG-002,2024-07-01T11:01:00,2024-07-01T11:15:00,4,analyst_a,Analyzed web logs and correlated with WAF events. Verified against known false positive patterns.
+INV-004,EVT-004,ORG-002,2024-07-01T12:01:00,2024-07-01T12:10:00,3,analyst_c,Reviewed authentication logs. Confirmed expected behavior.
+INV-005,EVT-005,ORG-002,2024-07-01T13:01:00,2024-07-01T13:01:00,1,analyst_b,Checked.
+INV-006,EVT-006,ORG-002,2024-07-01T14:01:00,2024-07-01T14:01:00,1,analyst_a,Checked.
+INV-007,EVT-007,ORG-002,2024-07-01T15:01:00,2024-07-01T15:20:00,5,analyst_c,Analyzed malware signature against threat intelligence feeds. Verified IOC hash against sandbox results.

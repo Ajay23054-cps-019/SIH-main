@@ -1,0 +1,6 @@
+alert_id,cse_id,timestamp,severity,category,asset_id,status,closure_timestamp,description
+AL-001,MY-CSE-001,2024-06-01T10:00:00,HIGH,malware,AS-001,closed,2024-06-01T10:05:00,Suspicious file detected
+AL-002,MY-CSE-001,2024-06-01T11:00:00,CRITICAL,network,AS-002,closed,2024-06-01T11:02:00,Lateral movement detected
+AL-003,MY-CSE-001,2024-06-01T12:00:00,MEDIUM,authentication,AS-001,closed,2024-06-01T12:30:00,Failed login attempts
+AL-004,MY-CSE-001,2024-06-01T13:00:00,LOW,endpoint,AS-003,closed,2024-06-01T13:15:00,USB device connected
+AL-005,MY-CSE-001,2024-06-01T14:00:00,HIGH,database,AS-004,closed,2024-06-01T14:01:00,Unusual query pattern

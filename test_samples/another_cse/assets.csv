@@ -1,0 +1,6 @@
+system_id,cse_id,type,criticality,env,monitoring
+SYS-001,ORG-002,server,CRITICAL,production,monitored
+SYS-002,ORG-002,endpoint,HIGH,production,monitored
+SYS-003,ORG-002,web_server,HIGH,production,monitored
+SYS-004,ORG-002,endpoint,MEDIUM,staging,monitored
+SYS-005,ORG-002,database,CRITICAL,production,monitored

@@ -1,0 +1,6 @@
+investigation_id,alert_id,cse_id,timestamp_open,timestamp_close,evidence_entries,assigned_to,notes
+INV-001,AL-001,MY-CSE-001,2024-06-01T10:01:00,2024-06-01T10:05:00,2,analyst_1,Checked. Benign.
+INV-002,AL-002,MY-CSE-001,2024-06-01T11:01:00,2024-06-01T11:02:00,1,analyst_2,Checked.
+INV-003,AL-003,MY-CSE-001,2024-06-01T12:01:00,2024-06-01T12:30:00,5,analyst_1,Analyzed authentication logs against baseline. Verified source IP against asset registry. Confirmed expected behavior per maintenance window (ticket #4521). Checked event logs for suspicious patterns. Cross-referenced threat intelligence.
+INV-004,AL-004,MY-CSE-001,2024-06-01T13:01:00,2024-06-01T13:15:00,3,analyst_3,Reviewed USB device against approved device list. Verified user identity.
+INV-005,AL-005,MY-CSE-001,2024-06-01T14:01:00,2024-06-01T14:01:00,1,analyst_2,Checked.

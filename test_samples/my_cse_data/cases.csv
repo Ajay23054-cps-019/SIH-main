@@ -1,0 +1,2 @@
+case_id,related_alerts,cse_id,case_type,severity,closure_time,resolution
+CASE-001,"AL-001,AL-002",MY-CSE-001,security_incident,HIGH,2024-06-01T11:30:00,Contained and remediated

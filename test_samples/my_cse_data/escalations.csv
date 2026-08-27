@@ -1,0 +1,2 @@
+escalation_id,investigation_id,cse_id,timestamp,decision,has_followup,recipient,rationale
+ESC-001,INV-002,MY-CSE-001,2024-06-01T11:03:00,escalated,1,SOC Lead,Critical lateral movement requires management visibility

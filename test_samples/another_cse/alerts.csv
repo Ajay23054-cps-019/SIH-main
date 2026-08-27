@@ -1,0 +1,8 @@
+EventID,cse_id,created_time,priority,type,system_id,status,closed_at,summary
+EVT-001,ORG-002,2024-07-01T09:00:00,CRITICAL,malware,SYS-001,closed,2024-07-01T09:01:00,Ransomware detected
+EVT-002,ORG-002,2024-07-01T10:00:00,HIGH,network,SYS-002,closed,2024-07-01T10:02:00,Suspicious outbound connection
+EVT-003,ORG-002,2024-07-01T11:00:00,MEDIUM,web,SYS-003,closed,2024-07-01T11:15:00,SQL injection attempt
+EVT-004,ORG-002,2024-07-01T12:00:00,LOW,authentication,SYS-001,closed,2024-07-01T12:10:00,Password spray detected
+EVT-005,ORG-002,2024-07-01T13:00:00,HIGH,endpoint,SYS-004,closed,2024-07-01T13:01:00,Suspicious process execution
+EVT-006,ORG-002,2024-07-01T14:00:00,CRITICAL,database,SYS-005,closed,2024-07-01T14:01:00,Data exfiltration attempt
+EVT-007,ORG-002,2024-07-01T15:00:00,MEDIUM,malware,SYS-002,closed,2024-07-01T15:20:00,Adware detected

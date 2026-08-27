@@ -1,0 +1,29 @@
+[
+  {
+    "alert_id": "JSON-001",
+    "cse_id": "JSON-CSE",
+    "timestamp": "2024-08-01T10:00:00",
+    "severity": "HIGH",
+    "category": "malware",
+    "asset_id": "A1",
+    "status": "closed"
+  },
+  {
+    "alert_id": "JSON-002",
+    "cse_id": "JSON-CSE",
+    "timestamp": "2024-08-01T11:00:00",
+    "severity": "CRITICAL",
+    "category": "network",
+    "asset_id": "A2",
+    "status": "closed"
+  },
+  {
+    "alert_id": "JSON-003",
+    "cse_id": "JSON-CSE",
+    "timestamp": "2024-08-01T12:00:00",
+    "severity": "MEDIUM",
+    "category": "authentication",
+    "asset_id": "A1",
+    "status": "closed"
+  }
+]

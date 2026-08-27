@@ -1,0 +1,5 @@
+asset_id,cse_id,asset_type,criticality,environment,monitoring_status
+AS-001,MY-CSE-001,server,CRITICAL,production,monitored
+AS-002,MY-CSE-001,endpoint,HIGH,production,monitored
+AS-003,MY-CSE-001,endpoint,MEDIUM,production,monitored
+AS-004,MY-CSE-001,database,CRITICAL,production,monitored
