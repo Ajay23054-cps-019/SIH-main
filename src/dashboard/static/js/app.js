@@ -221,7 +221,7 @@ function renderFeedbackSummary(summary, total) {
             '<td class="num">' + Math.round(s.worthwhile_rate * 100) + '%</td>' +
             '<td><span class="advisory">' + escapeHtml(s.advisory) +
             '</span></td></tr>';
-        }).join("") + '</tbody></table>"
+        }).join("") + '</tbody></table>'
       : '<p class="muted">No advisories yet — keep recording dispositions ' +
         'to surface calibration guidance.</p>');
 }
