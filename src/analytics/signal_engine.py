@@ -24,6 +24,7 @@ from src.analytics import (
     execution_gaps,
     negative_space,
     peer_deviation,
+    reasoning_quality_signals,
 )
 from src.analytics.finding import load_thresholds
 from src.analytics.profiles import BehavioralProfile
@@ -34,6 +35,7 @@ CATEGORY_MODULES = {
     "negative_space": negative_space,
     "behavioral_anomaly": behavioral_anomalies,
     "peer_deviation": peer_deviation,
+    "reasoning_quality": reasoning_quality_signals,
 }
 
 SIGNAL_REGISTRY: Dict[str, tuple] = {}
@@ -41,8 +43,8 @@ for _cat, _mod in CATEGORY_MODULES.items():
     for _name, _fn in _mod.SIGNALS:
         SIGNAL_REGISTRY[_name] = (_cat, _fn)
 
-assert len(SIGNAL_REGISTRY) == 21, \
-    f"expected 21 registered signals, found {len(SIGNAL_REGISTRY)}"
+assert len(SIGNAL_REGISTRY) == 25, \
+    f"expected 25 registered signals, found {len(SIGNAL_REGISTRY)}"
 
 FINDINGS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS findings (

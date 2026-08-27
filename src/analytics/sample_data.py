@@ -77,6 +77,8 @@ SEEDED_SCENARIOS = {
     "CSE-073": "weekend_escalation_gap",
     "CSE-019": "templated_investigations",
     "CSE-061": "combined_weak",
+    "CSE-037": "shallow_reasoning",
+    "CSE-048": "deep_reasoning",
 }
 
 # Fixed ID pool so the documented IDs (incl. CSE-089) exist within 50 CSEs.
@@ -97,6 +99,8 @@ SCENARIO_SIGNALS = {
     "weekend_escalation_gap": {"escalation_absence"},
     "templated_investigations": {"template_investigation"},
     "combined_weak": {"investigation_depth_outlier"},
+    "shallow_reasoning": {"shallow_justification", "template_notes"},
+    "deep_reasoning": set(),
 }
 
 
@@ -166,6 +170,8 @@ class ScenarioParams:
     zero_endpoint_alerts: bool = False
     weekend_escalations_allowed: bool = True
     templated_notes: bool = False
+    shallow_notes: bool = False
+    deep_notes: bool = False
 
 
 SCENARIOS: Dict[str, ScenarioParams] = {
@@ -205,6 +211,14 @@ SCENARIOS: Dict[str, ScenarioParams] = {
         closure_speed_factor=0.30,
         critical_escalation_prob=0.05,
         followup_prob=0.40,
+    ),
+    "shallow_reasoning": ScenarioParams(
+        name="shallow_reasoning",
+        shallow_notes=True,
+    ),
+    "deep_reasoning": ScenarioParams(
+        name="deep_reasoning",
+        deep_notes=True,
     ),
 }
 
@@ -342,6 +356,26 @@ def _contextual_note(alert_id, category, asset_id, source, finding) -> str:
     )
 
 
+def _deep_note(alert_id, category, asset_id, source, finding, ticket_id) -> str:
+    return (
+        f"[{alert_id}] {category} alert on {asset_id}: Verified source against "
+        f"asset registry. Confirmed activity expected per maintenance window "
+        f"(ticket #{ticket_id}). Checked {source} for suspicious patterns—none "
+        f"detected. Cross-referenced threat intelligence—no known IOCs. "
+        f"Correlated with historical events; {finding}."
+    )
+
+
+def _shallow_note(alert_id, category, asset_id, source, finding) -> str:
+    templates = [
+        "Checked. Benign.",
+        "Reviewed. No action needed.",
+        "Verified. Closed as non-issue.",
+        "Assessed. Nothing suspicious.",
+    ]
+    return templates[abs(hash(alert_id)) % len(templates)]
+
+
 # ---------------------------------------------------------------------------
 # Core generation
 # ---------------------------------------------------------------------------
@@ -455,11 +489,18 @@ def generate_cse(spec: EntitySpec, master_rng: np.random.Generator) -> Dict[str,
                     "notes": (
                         TEMPLATED_NOTES[inv_counter % len(TEMPLATED_NOTES)]
                         if sc.templated_notes
-                        else _contextual_note(
-                            aid, cat, asset_sel[j],
-                            TEXT_BANKS["sources"][int(rng.integers(0, len(TEXT_BANKS["sources"])))],
-                            TEXT_BANKS["findings"][int(rng.integers(0, len(TEXT_BANKS["findings"])))],
-                        )
+                        else _shallow_note(aid, cat, asset_sel[j],
+                                           TEXT_BANKS["sources"][int(rng.integers(0, len(TEXT_BANKS["sources"])))],
+                                           TEXT_BANKS["findings"][int(rng.integers(0, len(TEXT_BANKS["findings"])))])
+                        if sc.shallow_notes
+                        else _deep_note(aid, cat, asset_sel[j],
+                                        TEXT_BANKS["sources"][int(rng.integers(0, len(TEXT_BANKS["sources"])))],
+                                        TEXT_BANKS["findings"][int(rng.integers(0, len(TEXT_BANKS["findings"])))],
+                                        int(rng.integers(1000, 9999)))
+                        if sc.deep_notes
+                        else _contextual_note(aid, cat, asset_sel[j],
+                                              TEXT_BANKS["sources"][int(rng.integers(0, len(TEXT_BANKS["sources"])))],
+                                              TEXT_BANKS["findings"][int(rng.integers(0, len(TEXT_BANKS["findings"])))])
                     ),
                     "depth_score": None,
                 })
