@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional, Union
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -67,6 +67,10 @@ def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
         app.mount("/dashboard/static", StaticFiles(directory=str(static_dir)), name="dashboard-static")
 
     app.include_router(dashboard_router)
+
+    @app.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
+    def chrome_devtools_pwa():
+        return Response(status_code=204)
 
     return app
 
