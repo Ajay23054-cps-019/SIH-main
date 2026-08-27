@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional, Union
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -38,6 +38,13 @@ def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def silence_chrome_devtools(request: Request, call_next):
+        """Return 204 for Chrome DevTools PWA check without logging."""
+        if request.url.path == "/.well-known/appspecific/com.chrome.devtools.json":
+            return Response(status_code=204)
+        return await call_next(request)
+
     @app.get("/health", tags=["system"])
     def health():
         data = {"status": "ok", "version": "0.1.0", "service": "SAT-SA"}
@@ -67,10 +74,6 @@ def create_app(db_path: Optional[Union[str, Path]] = None) -> FastAPI:
         app.mount("/dashboard/static", StaticFiles(directory=str(static_dir)), name="dashboard-static")
 
     app.include_router(dashboard_router)
-
-    @app.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
-    def chrome_devtools_pwa():
-        return Response(status_code=204)
 
     return app
 
