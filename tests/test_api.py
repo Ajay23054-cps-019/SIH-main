@@ -177,6 +177,23 @@ class TestIngestion:
         assert len(meta) == 1
         assert meta.iloc[0]["size_band"] == "Medium"
 
+    def test_upload_json_with_entity_param(self, tmp_path):
+        import json
+
+        api = self._mini_api(tmp_path)
+        payload = json.dumps([
+            {"alert_id": "J-1", "cse_id": "J-CSE",
+             "timestamp": "2024-01-01T10:00:00", "severity": "HIGH",
+             "category": "malware", "asset_id": "A1", "status": "closed"},
+        ])
+        # Non-standard filename: entity supplied explicitly.
+        resp = api.post("/api/ingest/upload",
+                        files={"file": ("weird_name.json",
+                                        io.BytesIO(payload.encode()))},
+                        data={"entity": "alerts", "cse_id": "J-CSE"})
+        assert resp.status_code == 200
+        assert resp.json()["data"]["rows_written"] == 1
+
     def test_status_unknown_cse_404(self, api):
         resp = api.get("/api/ingest/status/CSE-GHOST")
         assert resp.status_code == 404

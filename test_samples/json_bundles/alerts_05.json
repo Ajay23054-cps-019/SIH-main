@@ -1,0 +1,82 @@
+[
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0000",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:00:00",
+    "severity": "CRITICAL",
+    "category": "database",
+    "asset_id": "AS-0001",
+    "status": "closed",
+    "description": "database detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0001",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:06:00",
+    "severity": "CRITICAL",
+    "category": "malware",
+    "asset_id": "AS-0005",
+    "status": "closed",
+    "description": "database detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0002",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:12:00",
+    "severity": "HIGH",
+    "category": "endpoint",
+    "asset_id": "AS-0006",
+    "status": "closed",
+    "description": "database detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0003",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:18:00",
+    "severity": "LOW",
+    "category": "malware",
+    "asset_id": "AS-0001",
+    "status": "closed",
+    "description": "malware detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0004",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:24:00",
+    "severity": "MEDIUM",
+    "category": "database",
+    "asset_id": "AS-0008",
+    "status": "closed",
+    "description": "endpoint detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0005",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:30:00",
+    "severity": "HIGH",
+    "category": "web",
+    "asset_id": "AS-0005",
+    "status": "closed",
+    "description": "web detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0006",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:36:00",
+    "severity": "CRITICAL",
+    "category": "malware",
+    "asset_id": "AS-0001",
+    "status": "closed",
+    "description": "network detection (json sample)"
+  },
+  {
+    "alert_id": "SAMPLE-JSON-005-AL-0007",
+    "cse_id": "SAMPLE-JSON-005",
+    "timestamp": "2024-06-01T09:42:00",
+    "severity": "MEDIUM",
+    "category": "authentication",
+    "asset_id": "AS-0007",
+    "status": "closed",
+    "description": "authentication detection (json sample)"
+  }
+]

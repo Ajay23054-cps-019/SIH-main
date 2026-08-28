@@ -1,0 +1,2 @@
+case_id,cse_id,related_alerts,case_type,severity,closure_time,resolution
+SAMPLE-CSE-001-CASE-0000,SAMPLE-CSE-001,"[""SAMPLE-CSE-001-AL-0000""]",incident,HIGH,2024-06-01T09:02:00,Resolved via standard IR process

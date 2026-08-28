@@ -1,0 +1,9 @@
+alert_id,cse_id,timestamp,severity,category,asset_id,status,closure_timestamp,description
+SAMPLE-CSE-001-AL-0000,SAMPLE-CSE-001,2024-06-01T09:00:00,MEDIUM,endpoint,AS-0008,closed,2024-06-01T09:20:00,endpoint detection on AS-0008 (medium severity)
+SAMPLE-CSE-001-AL-0001,SAMPLE-CSE-001,2024-06-01T09:07:00,LOW,network,AS-0006,closed,2024-06-01T09:25:00,network detection on AS-0006 (low severity)
+SAMPLE-CSE-001-AL-0002,SAMPLE-CSE-001,2024-06-01T09:14:00,MEDIUM,malware,AS-0001,closed,2024-06-01T09:39:00,malware detection on AS-0001 (medium severity)
+SAMPLE-CSE-001-AL-0003,SAMPLE-CSE-001,2024-06-01T09:21:00,MEDIUM,network,AS-0008,closed,2024-06-01T09:37:00,network detection on AS-0008 (medium severity)
+SAMPLE-CSE-001-AL-0004,SAMPLE-CSE-001,2024-06-01T09:28:00,CRITICAL,malware,AS-0006,closed,2024-06-01T09:43:00,malware detection on AS-0006 (critical severity)
+SAMPLE-CSE-001-AL-0005,SAMPLE-CSE-001,2024-06-01T09:35:00,CRITICAL,authentication,AS-0003,closed,2024-06-01T09:45:00,authentication detection on AS-0003 (critical severity)
+SAMPLE-CSE-001-AL-0006,SAMPLE-CSE-001,2024-06-01T09:42:00,HIGH,web,AS-0005,closed,2024-06-01T10:09:00,web detection on AS-0005 (high severity)
+SAMPLE-CSE-001-AL-0007,SAMPLE-CSE-001,2024-06-01T09:49:00,CRITICAL,malware,AS-0002,closed,2024-06-01T10:06:00,malware detection on AS-0002 (critical severity)

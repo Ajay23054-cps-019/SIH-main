@@ -1,0 +1,3 @@
+case_id,cse_id,related_alerts,case_type,severity,closure_time,resolution
+SAMPLE-CSE-005-CASE-0000,SAMPLE-CSE-005,"[""SAMPLE-CSE-005-AL-0000""]",incident,LOW,2024-06-01T09:02:00,Resolved via standard IR process
+SAMPLE-CSE-005-CASE-0001,SAMPLE-CSE-005,"[""SAMPLE-CSE-005-AL-0001""]",incident,MEDIUM,2024-06-01T09:09:00,Resolved via standard IR process

@@ -1,0 +1,3 @@
+escalation_id,investigation_id,cse_id,timestamp,decision,has_followup,recipient,rationale
+SAMPLE-CSE-004-ESC-0000,SAMPLE-CSE-004-INV-0000,SAMPLE-CSE-004,2024-06-01T09:01:00,escalated,true,soc-lead@org,High-severity alert requires review
+SAMPLE-CSE-004-ESC-0001,SAMPLE-CSE-004-INV-0001,SAMPLE-CSE-004,2024-06-01T09:08:00,escalated,true,soc-lead@org,High-severity alert requires review

@@ -1,0 +1,9 @@
+investigation_id,alert_id,cse_id,timestamp_open,timestamp_close,evidence_entries,assigned_to,notes,depth_score
+SAMPLE-CSE-001-INV-0000,SAMPLE-CSE-001-AL-0000,SAMPLE-CSE-001,2024-06-01T09:00:00,2024-06-01T09:05:00,1,analyst_0,OK.,2.5
+SAMPLE-CSE-001-INV-0001,SAMPLE-CSE-001-AL-0001,SAMPLE-CSE-001,2024-06-01T09:07:00,2024-06-01T09:15:00,5,analyst_1,Analyzed malware signature against threat intelligence feeds. Verified IOC hash via sandbox and confirmed no lateral movement across the estate.,4.3
+SAMPLE-CSE-001-INV-0002,SAMPLE-CSE-001-AL-0002,SAMPLE-CSE-001,2024-06-01T09:14:00,2024-06-01T09:28:00,4,analyst_2,Analyzed malware signature against threat intelligence feeds. Verified IOC hash via sandbox and confirmed no lateral movement across the estate.,2.2
+SAMPLE-CSE-001-INV-0003,SAMPLE-CSE-001-AL-0003,SAMPLE-CSE-001,2024-06-01T09:21:00,2024-06-01T09:26:00,1,analyst_3,Analyzed malware signature against threat intelligence feeds. Verified IOC hash via sandbox and confirmed no lateral movement across the estate.,1.0
+SAMPLE-CSE-001-INV-0004,SAMPLE-CSE-001-AL-0004,SAMPLE-CSE-001,2024-06-01T09:28:00,2024-06-01T09:34:00,1,analyst_0,Closed.,1.8
+SAMPLE-CSE-001-INV-0005,SAMPLE-CSE-001-AL-0005,SAMPLE-CSE-001,2024-06-01T09:35:00,2024-06-01T09:36:00,2,analyst_1,"Reviewed authentication logs, confirmed expected behaviour, and checked for impossible-travel using geo-IP enrichment.",4.0
+SAMPLE-CSE-001-INV-0006,SAMPLE-CSE-001-AL-0006,SAMPLE-CSE-001,2024-06-01T09:42:00,2024-06-01T09:55:00,1,analyst_2,"Correlated firewall and EDR events, cross-referenced with historical baseline, and validated against known-good behaviour patterns.",3.4
+SAMPLE-CSE-001-INV-0007,SAMPLE-CSE-001-AL-0007,SAMPLE-CSE-001,2024-06-01T09:49:00,2024-06-01T10:00:00,5,analyst_3,OK.,3.5

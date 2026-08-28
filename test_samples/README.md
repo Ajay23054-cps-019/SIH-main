@@ -18,12 +18,24 @@ test_samples/
 │   ├── alerts.csv         # Uses "EventID", "priority", "type"
 │   ├── investigations.csv # Uses "id", "evidence_count"
 │   └── assets.csv         # Uses "system_id", "env", "monitoring"
-├── my_logs/               # Plain-text syslog (log-only upload)
-│   ├── soc.log            # SOC/device syslog lines (malware, lateral movement, …)
+├── my_logs/               # Hand-written log samples (see also logs/ below)
+│   ├── soc.log            # SOC/device syslog lines
 │   └── web_access.log    # Bulk Apache/Nginx access logs (Combined Log Format)
+├── logs/                  # Auto-generated bulk samples (see Generator below)
+│   ├── syslog/            # 20 SOC/device syslog scenarios (~15-40 lines each)
+│   └── web/               # 15 bulk Apache/Nginx access-log scenarios
+├── cse_bundles/           # 5 full structured CSE bundles (CSV per entity)
+│   └── SAMPLE-CSE-NNN/    # cse_metadata + alerts + investigations + escalations + cases + assets
+├── json_bundles/          # 5 JSON alert bundles (upload with entity=alerts)
+│   └── alerts_NN.json
 └── json_format/           # JSON format
     └── alerts.json
 ```
+
+> **Regenerating samples:** `python scripts/generate_test_samples.py` (deterministic,
+> seed 1337) recreates the `logs/`, `cse_bundles/`, and `json_bundles/` folders —
+> 45 scenario samples in total (~70 files). Edit the scenario lists in that
+> script to add or tweak cases.
 
 ## Sample 4: my_logs (Plain-Text Syslog → Derived Alerts)
 

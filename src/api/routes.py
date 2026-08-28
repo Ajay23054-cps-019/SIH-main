@@ -163,6 +163,7 @@ def health(db_path: Path = Depends(get_db_path)):
 @router.post("/ingest/upload")
 async def ingest_upload(request: Request, file: UploadFile,
                         cse_id: Optional[str] = Form(None),
+                        entity: Optional[str] = Form(None),
                         db_path: Path = Depends(get_db_path)):
     """Upload one entity file and append it to the SQLite DB.
 
@@ -176,8 +177,10 @@ async def ingest_upload(request: Request, file: UploadFile,
       parsed as syslog, classified into alerts (severity, category, recommended
       solution) via deterministic rules, then stored as alerts.
 
-    ``cse_id`` is an optional form field. When supplied it is stamped onto
-    records that lack one (and, for logs, identifies the source CSE).
+    ``cse_id`` and ``entity`` are optional form fields. ``cse_id`` is stamped
+    onto records that lack one (and, for logs, identifies the source CSE).
+    ``entity`` overrides the entity inferred from the filename (so a file named
+    ``alerts_01.json`` can be uploaded with ``entity=alerts``).
     """
     import tempfile
     from src.ingestion.pipeline import ingest_path
@@ -186,13 +189,14 @@ async def ingest_upload(request: Request, file: UploadFile,
     filename = (file.filename or "").lower()
     stem = Path(filename).stem
     suffix = Path(filename).suffix
-    is_logs = (stem == "logs") or (stem == "log") or suffix in (".log", ".txt")
+    is_logs = (entity == "logs") or (stem == "logs") or (stem == "log") \
+        or suffix in (".log", ".txt")
 
     if is_logs:
         body = await _ingest_logs(file, cse_id, db_path)
         return envelope(body)
 
-    entity = stem
+    entity = entity or stem
     if entity not in TABLE_NAMES:
         raise NotFound(
             f"cannot infer entity type from '{file.filename}'; rename the "
@@ -200,11 +204,12 @@ async def ingest_upload(request: Request, file: UploadFile,
             f"logs.txt / *.log",
             status_code=422, code="unknown_entity")
     content = await file.read()
-    try:
-        pd.read_csv(io.BytesIO(content))
-    except Exception as exc:
-        raise NotFound(f"unreadable CSV: {exc}", status_code=422,
-                        code="bad_csv")
+    if suffix == ".csv":
+        try:
+            pd.read_csv(io.BytesIO(content))
+        except Exception as exc:
+            raise NotFound(f"unreadable CSV: {exc}", status_code=422,
+                            code="bad_csv")
 
     with tempfile.NamedTemporaryFile(suffix=suffix or ".csv", delete=False) as tmp:
         tmp.write(content)
