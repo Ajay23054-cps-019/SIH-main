@@ -2,17 +2,27 @@
 import subprocess
 import sys
 import time
+import threading
 import webview
 
 
 def start_server():
-    """Start uvicorn server in background thread."""
-    subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "src.api.main:app",
-         "--host", "127.0.0.1", "--port", "8000", "--log-level", "warning"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    """Start uvicorn server in background thread or subprocess."""
+    if getattr(sys, "frozen", False):
+        import uvicorn
+        from src.api.main import app
+
+        config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
+        server = uvicorn.Server(config)
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+    else:
+        subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "src.api.main:app",
+             "--host", "127.0.0.1", "--port", "8000", "--log-level", "warning"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     import urllib.request
     for _ in range(30):
         try:
