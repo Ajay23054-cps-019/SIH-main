@@ -18,8 +18,55 @@ test_samples/
 │   ├── alerts.csv         # Uses "EventID", "priority", "type"
 │   ├── investigations.csv # Uses "id", "evidence_count"
 │   └── assets.csv         # Uses "system_id", "env", "monitoring"
+├── my_logs/               # Plain-text syslog (log-only upload)
+│   ├── soc.log            # SOC/device syslog lines (malware, lateral movement, …)
+│   └── web_access.log    # Bulk Apache/Nginx access logs (Combined Log Format)
 └── json_format/           # JSON format
     └── alerts.json
+```
+
+## Sample 4: my_logs (Plain-Text Syslog → Derived Alerts)
+
+**Purpose:** Test the log-only ingestion path. Users upload raw syslog lines;
+the system parses each line and **derives alerts** using deterministic
+classification (no ML/LLM):
+
+- **Severity** — from an explicit level token (`[ERROR]`, `CRITICAL`, …) and
+  from content keywords (`ransomware`, `breach`, `brute force`, …), taking the
+  higher. For web/access logs, the HTTP status also drives severity
+  (5xx → HIGH, 4xx → MEDIUM).
+- **Category** — `malware` / `authentication` / `network` / `database` /
+  `web` / `endpoint` by keyword priority.
+- **Solution** — a recommended response from the playbook, appended to the
+  alert description (`… || RECOMMENDED: …`).
+
+### Bulk Apache/Nginx access logs
+
+`web_access.log` demonstrates the Apache **Combined Log Format**, which is
+ingested in bulk automatically:
+
+```
+127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326
+```
+
+Each line is parsed into client IP (asset), timestamp, request, and status, then
+classified — e.g. `POST /wp-login.php` → `authentication`/`HIGH`,
+`GET /etc/passwd` → `web`/`HIGH` (path-traversal indicator), `5xx` → `HIGH`.
+
+The derived alerts are stored exactly like any other alerts, so the existing
+profiles, signals and dashboard work unchanged. A minimal `cse_metadata` row is
+auto-created so the CSE appears in portfolio rankings.
+
+Upload with `cse_id` to scope the derived alerts to a specific CSE:
+
+```bash
+curl -X POST http://localhost:8000/api/ingest/upload \
+  -F "file=@test_samples/my_logs/soc.log" \
+  -F "cse_id=MY-LOG-CSE"
+
+curl -X POST http://localhost:8000/api/ingest/upload \
+  -F "file=@test_samples/my_logs/web_access.log" \
+  -F "cse_id=MY-WEB-CSE"
 ```
 
 ## Sample 1: my_cse_data (Standard Format)

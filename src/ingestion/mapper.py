@@ -78,6 +78,7 @@ PER_ENTITY_MAPPINGS: Dict[str, Dict[str, List[str]]] = {
                                "monitoring"],
     },
     "cse_metadata": {
+        "cse_id": ["cse_id", "id"],
         "name": ["name", "cse_name", "organization", "organisation", "org_name"],
         "claimed_capabilities": ["claimed_capabilities", "capabilities", "claims",
                                   "declared_capabilities"],

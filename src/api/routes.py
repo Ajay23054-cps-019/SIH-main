@@ -10,12 +10,13 @@ from __future__ import annotations
 import io
 import threading
 import uuid
+from datetime import datetime
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, Request, UploadFile
 
 from src.analytics.benchmarking import (
     benchmark_cse,
@@ -87,6 +88,59 @@ def _profile_to_dict(p: BehavioralProfile, period: Optional[str] = None) \
             "metrics": p.metrics, "warnings": p.warnings}
 
 
+def _ensure_cse_metadata(db_path: Path, cse_id: str) -> None:
+    """Create a minimal ``cse_metadata`` row for ``cse_id`` if none exists.
+
+    Log-only uploads carry no entity metadata; a stub row lets the CSE appear
+    in portfolio rankings with sensible Unknown/Medium defaults. Only columns
+    already present in the (possibly pre-existing) ``cse_metadata`` table are
+    written, so this is safe regardless of the table's current schema.
+    """
+    from sqlalchemy import text
+
+    from src.analytics.schemas import CSEMetadata
+    from src.storage.db import get_engine, save_frames
+
+    meta = CSEMetadata(cse_id=cse_id, name=cse_id, sector="Unknown",
+                       size_band="Medium")
+    df = pd.DataFrame([meta.model_dump(mode="python")])
+
+    engine = get_engine(db_path)
+    with engine.connect() as conn:
+        try:
+            cols = [r[1] for r in
+                    conn.execute(text("PRAGMA table_info(cse_metadata)")).fetchall()]
+        except Exception:
+            cols = []
+    if cols:
+        df = df[[c for c in df.columns if c in cols]]
+    save_frames({"cse_metadata": df}, db_path, if_exists="append")
+
+
+async def _ingest_logs(file: UploadFile, cse_id: Optional[str],
+                     db_path: Path) -> Dict[str, Any]:
+    """Parse plain-text syslog, classify into alerts, and append to the DB."""
+    from src.analytics.log_classifier import logs_to_alerts
+    from src.ingestion.log_parser import parse_syslog
+    from src.storage.db import save_frames
+
+    text = (await file.read()).decode("utf-8", errors="replace")
+    parsed = parse_syslog(text)
+    if not cse_id:
+        cse_id = "CSE-LOGS-" + datetime.now().strftime("%Y%m%d%H%M%S")
+    alerts, rejected = logs_to_alerts(parsed, cse_id)
+    if not alerts:
+        return {"entity": "logs", "rows_written": 0,
+                "rows_rejected": len(rejected), "n_logs": len(parsed),
+                "cse_id": cse_id}
+    df = pd.DataFrame([a.model_dump(mode="python") for a in alerts])
+    written = save_frames({"alerts": df}, db_path, if_exists="append")
+    _ensure_cse_metadata(db_path, cse_id)
+    return {"entity": "logs", "rows_written": written.get("alerts", 0),
+            "rows_rejected": len(rejected), "n_logs": len(parsed),
+            "cse_id": cse_id, "columns": list(df.columns)}
+
+
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -108,25 +162,71 @@ def health(db_path: Path = Depends(get_db_path)):
 
 @router.post("/ingest/upload")
 async def ingest_upload(request: Request, file: UploadFile,
+                        cse_id: Optional[str] = Form(None),
                         db_path: Path = Depends(get_db_path)):
-    """Upload one entity CSV (e.g. alerts.csv); appended to the SQLite DB."""
+    """Upload one entity file and append it to the SQLite DB.
+
+    Two ingestion paths:
+
+    * **Structured entities** (``alerts.csv``, ``investigations.json``, …): run
+      through the same mapper + normalizer pipeline as batch ingestion, so
+      heterogeneous column names (``EventID``, ``priority``, ``type`` …) are
+      translated to the canonical schema before storage.
+    * **Plain-text logs** (``logs.txt`` / ``*.log`` / a file named ``logs``):
+      parsed as syslog, classified into alerts (severity, category, recommended
+      solution) via deterministic rules, then stored as alerts.
+
+    ``cse_id`` is an optional form field. When supplied it is stamped onto
+    records that lack one (and, for logs, identifies the source CSE).
+    """
+    import tempfile
+    from src.ingestion.pipeline import ingest_path
     from src.storage.db import TABLE_NAMES, save_frames
 
     filename = (file.filename or "").lower()
-    entity = Path(filename).stem
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+    is_logs = (stem == "logs") or (stem == "log") or suffix in (".log", ".txt")
+
+    if is_logs:
+        body = await _ingest_logs(file, cse_id, db_path)
+        return envelope(body)
+
+    entity = stem
     if entity not in TABLE_NAMES:
         raise NotFound(
             f"cannot infer entity type from '{file.filename}'; rename the "
-            f"file to one of {', '.join(TABLE_NAMES)}",
+            f"file to one of {', '.join(TABLE_NAMES)} or upload logs as "
+            f"logs.txt / *.log",
             status_code=422, code="unknown_entity")
     content = await file.read()
     try:
-        df = pd.read_csv(io.BytesIO(content))
+        pd.read_csv(io.BytesIO(content))
     except Exception as exc:
         raise NotFound(f"unreadable CSV: {exc}", status_code=422,
-                       code="bad_csv")
+                        code="bad_csv")
+
+    with tempfile.NamedTemporaryFile(suffix=suffix or ".csv", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+    try:
+        result = ingest_path(tmp_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    if cse_id:
+        for name, frame in result.frames.items():
+            if frame is not None and len(frame) and "cse_id" in frame.columns:
+                frame["cse_id"] = frame["cse_id"].fillna(cse_id)
+
+    df = result.frames.get(entity)
+    if df is None or len(df) == 0:
+        return envelope({"entity": entity, "rows_written": 0,
+                         "rows_rejected": result.records_rejected,
+                         "columns": list(df.columns) if df is not None else []})
     written = save_frames({entity: df}, db_path, if_exists="append")
     return envelope({"entity": entity, "rows_written": written.get(entity, 0),
+                     "rows_rejected": result.records_rejected,
                      "columns": list(df.columns)})
 
 

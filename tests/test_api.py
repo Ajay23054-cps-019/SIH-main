@@ -144,6 +144,39 @@ class TestIngestion:
         assert resp.status_code == 422
         assert resp.json()["errors"][0]["code"] == "bad_csv"
 
+    def test_upload_logs_derives_alerts(self, tmp_path):
+        db_path = tmp_path / "ingest.db"
+        api = self._mini_api(tmp_path)
+        log_text = (
+            "2024-06-01T10:00:00.123Z host-5 malware: ransomware payload observed\n"
+            "2024-06-01 10:05:00 [WARN] host-3 auth: failed password for root\n"
+            "2024-06-01 11:00:00 CRITICAL host-2 network: lateral movement detected\n"
+        )
+        resp = api.post("/api/ingest/upload",
+                        files={"file": ("logs.txt",
+                                        io.BytesIO(log_text.encode()))},
+                        data={"cse_id": "CSE-LOGX"})
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["entity"] == "logs"
+        assert body["rows_written"] == 3
+        assert body["rows_rejected"] == 0
+
+        from src.storage.db import load_table
+        alerts = load_table("alerts", db_path, cse_id="CSE-LOGX")
+        assert len(alerts) == 3
+        sev = set(alerts["severity"])
+        assert "CRITICAL" in sev
+        # category + asset_id derived from log content
+        assert "malware" in set(alerts["category"])
+        assert "host-5" in set(alerts["asset_id"])
+        # recommended solution captured in the description
+        assert any("RECOMMENDED" in d for d in alerts["description"].tolist())
+        # cse_metadata auto-created so the CSE shows in portfolio
+        meta = load_table("cse_metadata", db_path, cse_id="CSE-LOGX")
+        assert len(meta) == 1
+        assert meta.iloc[0]["size_band"] == "Medium"
+
     def test_status_unknown_cse_404(self, api):
         resp = api.get("/api/ingest/status/CSE-GHOST")
         assert resp.status_code == 404
