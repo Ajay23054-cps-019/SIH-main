@@ -53,9 +53,12 @@ _PROC_PREFIX_RE = re.compile(r"^[\w.\-]+\[\d+\]\s*:\s*")
 
 # Apache/Nginx Combined + Common Log Format, e.g.
 # 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /x HTTP/1.0" 200 2326
+# The [ts] bracket is optional so we also match access-log entries that were
+# forwarded via syslog (timestamp lives in the syslog header, not the entry).
 _APACHE_RE = re.compile(
     r'^(?P<ip>\S+)\s+(?P<ident>\S+)\s+(?P<user>\S+)\s+'
-    r'\[(?P<ts>[^\]]+)\]\s+"(?P<request>[^"]*)"\s+(?P<status>\d{3})\s+(?P<bytes>\S+)'
+    r'(?:\[(?P<ts>[^\]]+)\]\s+)?'
+    r'"(?P<request>[^"]*)"\s+(?P<status>\d{3})\s+(?P<bytes>\S+)'
     r'(?:\s+"(?P<referer>[^"]*)"\s+"(?P<ua>[^"]*)")?\s*$'
 )
 
@@ -167,7 +170,8 @@ def parse_line(line: str) -> ParsedLog:
     # request, status) before the generic syslog handling.
     apache = _APACHE_RE.match(raw)
     if apache:
-        ts = _parse_apache_timestamp(apache.group("ts"))
+        ts_str = apache.group("ts")
+        ts = _parse_apache_timestamp(ts_str) if ts_str else None
         status = int(apache.group("status"))
         method, path = _split_request(apache.group("request"))
         user = apache.group("user")
@@ -202,6 +206,26 @@ def parse_line(line: str) -> ParsedLog:
     # Drop a leading "process[pid]:" prefix from the message body.
     rest = _PROC_PREFIX_RE.sub("", rest)
     rest = rest.lstrip("-: ").strip()
+
+    # After stripping the syslog prefix (timestamp, host, process), the
+    # remaining text may itself be an Apache/Nginx access-log line — common
+    # when web-server logs are forwarded via syslog (the timestamp lives in
+    # the syslog header, not in the access-log entry).  Re-check against the
+    # access-log grammar; if it matches, return an access-log style record.
+    apache = _APACHE_RE.match(rest)
+    if apache:
+        ts_str = apache.group("ts")
+        apache_ts = _parse_apache_timestamp(ts_str) if ts_str else None
+        status = int(apache.group("status"))
+        method, path = _split_request(apache.group("request"))
+        user = apache.group("user")
+        client_ip = apache.group("ip")
+        message = f"web access {method} {path} status {status}"
+        if user and user != "-":
+            message += f" user {user}"
+        return ParsedLog(raw=raw, timestamp=timestamp or apache_ts,
+                         host=client_ip, level=None, message=message,
+                         status_code=status, request=apache.group("request"))
 
     return ParsedLog(raw=raw, timestamp=timestamp, host=host,
                      level=level, message=rest)
